@@ -458,6 +458,7 @@ class ECAPA2(nn.Module):
         activation: str = "relu",
         lfe_fwse_hidden_dim: int = 128,
         lfe_use_frequency_encoding: bool = False,
+        gfe_hidden_channels: int = 1024,
         gfe_out_channels: int = 1536,
         state_pool_hidden_channels:int = 256,
     ):
@@ -473,7 +474,7 @@ class ECAPA2(nn.Module):
         )
         self.gfe = GlobalFeatureExtractorModule(
             in_channels=self.lfe.last_out_channels,
-            hidden_channels=1024,
+            hidden_channels=gfe_hidden_channels,
             out_channels=gfe_out_channels,
             frequency_bins_num=self.lfe.last_frequency_bins_num,
             activation=activation,
@@ -515,6 +516,7 @@ if __name__ == "__main__":
         activation="relu",
         lfe_fwse_hidden_dim=128,
         lfe_use_frequency_encoding=True,
+        gfe_hidden_channels=1024,
         gfe_out_channels=1536,
         state_pool_hidden_channels=256
     )
