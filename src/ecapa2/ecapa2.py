@@ -126,7 +126,7 @@ class LocalFeatureExtracterBlock(nn.Module):
         
         self.freq_encoding = None
         if use_frequency_encoding:
-            self.freq_encoding = nn.Parameter(torch.randn(1, 1, frequency_bins_num, 1))
+            self.freq_encoding = nn.Parameter(torch.randn(1, 1, frequency_bins_num, 1) * frequency_bins_num ** -0.5)
           
     def forward(self, x):
         w = x
