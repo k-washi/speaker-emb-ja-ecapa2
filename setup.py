@@ -1,9 +1,9 @@
 from setuptools import find_packages, setup
 
 setup(
-    name="ml env",
+    name="spkemb_ecapa2",
     version="0.0.1",
-    description="ml env",
+    description="spkemb_ecapa2",
     author="Kai Washizaki",
     author_email="bandad.kw@gmail.com",
     long_description_content_type="text/markdown",
