@@ -31,6 +31,15 @@ def load_wave(wave_file_path:str, sample_rate:int, is_torch:bool=True, mono:bool
         wave = wave.cpu().detach().numpy().copy()
     return wave, sample_rate
 
+def save_wave(wave, output_path, sample_rate:int=16000):
+    """save wave
+    """
+    if not isinstance(wave, torch.Tensor):
+        wave = torch.from_numpy(wave)
+
+    if wave.dim() == 1: wave = wave.unsqueeze(0)
+    torchaudio.save(str(output_path), src=wave.to(torch.float32), sample_rate=sample_rate)
+
 ######################
 # Mel Spec Transform #
 ######################
