@@ -64,7 +64,15 @@ class Ecapa2Dataset(Dataset):
             >>  print(mixed_spec.size(), label1.size(), label2.sizse(), mixup_lambda.size())
             >> torch.Size([2, 1, 257, 201]) torch.Size([2, 1]) torch.Size([2, 1]) torch.Size([2, 1]) 
             """
-            audio1, label_id1, spec1 = self.process(idx)
+            while True:
+                try:
+                    audio1, label_id1, spec1 = self.process(idx)
+                    break
+                except Exception as e:
+                    print(f"Error: {e}")
+                    print(f"Error fp: {self.audio_fp_list[idx]}")
+                    idx = torch.randint(0, len(self), (1,)).item()
+                    continue
             if not self.is_mixup:
                 if spec1.dim() == 3:
                     spec1 = spec1.squeeze(0)
@@ -74,9 +82,16 @@ class Ecapa2Dataset(Dataset):
                 
             # Mixup
             mixup_lambda = get_mixup_lambda(alpha=self.cfg.augment.mixup.alpha, beta=self.cfg.augment.mixup.beta)
-                
-            random_index = torch.randint(0, len(self), (1,)).item()
-            audio2, label_id2, spec2 = self.process(random_index)
+            
+            while True:
+                try:
+                    random_index = torch.randint(0, len(self), (1,)).item()
+                    audio2, label_id2, spec2 = self.process(random_index)
+                    break
+                except Exception as e:
+                    print(f"Error: {e}")
+                    print(f"Error fp: {self.audio_fp_list[random_index]}")
+                    continue
             mixed_spec, _ = mixup(
                 spec1, label_id1, spec2, label_id2, mixup_lambda, self.num_classes,
                 spec_normalize=self.cfg.augment.mixup.spec_normalize
