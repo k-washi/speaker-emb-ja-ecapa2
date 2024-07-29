@@ -13,7 +13,7 @@ class SaveConfig:
 @dataclass
 class EearlyStoppingConfig:
     patience: int = 5
-    mode: str = "max"
+    mode: str = "min"
     monitor: str = "val_eer"
     
 
@@ -22,19 +22,18 @@ class EearlyStoppingConfig:
 class Optimizer:
     optimizer: str = "adamw"
     scheduler: str = "cosine_with_warmup"
-    lr: float = 2e-4
-    eps: float = 1e-5
-    betas: tuple = (0.9, 0.999)
-    weight_decay: float = 1e-4
-    #lr_min: float = 1e-7
+    lr: float = 1e-3
+    eps: float = 1e-4
+    betas: tuple = field(default_factory=lambda: (0.9, 0.999))
+    weight_decay: float = 2e-4
+    lr_min: float = 1e-8
     mode: str = "min"
-    #t_initial: int = 25 # 1 cycle epochs
-    t_mul: int = 1
-    #decay_rate:float = 0.5
+    t_initial: int = 10 # 1 cycle epochs
+    decay_rate:float = 1 #
     monitor:str = "val_eer"
-    #warm_up_init:float = 1e-7
-    warm_up_t:int = 2
-    #warmup_prefix:bool =  True
+    warm_up_init:float = 0 #1e-7
+    warm_up_t:int = 0 # 2
+    warmup_prefix:bool = False # True
 
 @dataclass()
 class MLConfig:

@@ -4,8 +4,34 @@ import torch.nn as nn
 def get_activation(activation: str):
     if activation == "relu":
         return nn.ReLU(inplace=True)
+    elif activation == "gelu":
+        return nn.GELU()
     else:
         raise NotImplementedError(f"activation {activation} is not implemented")
+
+class DepthwiseConv2dBlock(nn.Module):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        stride: tuple[int, int] = (1, 1),
+        bias: bool = False
+    ) -> None:
+        super().__init__()
+        self.conv2d = nn.Conv2d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            bias=bias,
+            padding=[kernel_size//2, kernel_size//2],
+            groups=in_channels
+        )
+    
+    def forward(self, x):
+        x = self.conv2d(x)
+        return x
 
 class Conv2dBlock(nn.Module):
     def __init__(
@@ -28,12 +54,12 @@ class Conv2dBlock(nn.Module):
         )
         
         self.activation = get_activation(activation)
-        self.batch_norm = nn.BatchNorm2d(out_channels)
+        #self.batch_norm = nn.BatchNorm2d(out_channels)
     
     def forward(self, x):
         x = self.conv2d(x)
         x = self.activation(x)
-        x = self.batch_norm(x)
+        #x = self.batch_norm(x)
         return x
 
 class FrequencyWiseSqueezeExcitationBlock(nn.Module):
@@ -86,24 +112,27 @@ class LocalFeatureExtracterBlock(nn.Module):
         use_frequency_encoding: bool = False,
     ) -> None:
         super().__init__()
-        self.conv2d_1 = Conv2dBlock(
+        self.conv2d_1 = DepthwiseConv2dBlock(
             in_channels=in_channels,
-            out_channels=out_channels,
+            out_channels=in_channels,
             kernel_size=kernel_size,
             stride=first_stride,
-            activation=activation
+            bias=True
         )
+        self.ln = nn.LayerNorm(in_channels, eps=1e-4)
         self.conv2d_2 = Conv2dBlock(
-            in_channels=out_channels,
+            in_channels=in_channels,
             out_channels=out_channels,
-            kernel_size=kernel_size,
-            activation=activation
+            kernel_size=1,
+            activation=activation,
+            bias=True
         )
         self.conv2d_3 = Conv2dBlock(
             in_channels=out_channels,
             out_channels=out_channels,
-            kernel_size=kernel_size,
-            activation=activation
+            kernel_size=1,
+            activation=activation,
+            bias=True
         )
         self.out_frequency_bins_num = frequency_bins_num // first_stride[0]
         self.downsample = None
@@ -133,6 +162,9 @@ class LocalFeatureExtracterBlock(nn.Module):
         if self.freq_encoding is not None:
             w = w + self.freq_encoding
         w = self.conv2d_1(w)
+        w = w.permute(0, 2, 3, 1)
+        w = self.ln(w)
+        w = w.permute(0, 3, 1, 2)
         w = self.conv2d_2(w)
         w = self.conv2d_3(w)
         w = self.fwse(w)
@@ -179,7 +211,7 @@ class LocalFeatureExtractorModule(nn.Module):
         self, 
         in_channels: int,
         out_channels: int,
-        kernel_size: int=3,
+        kernel_size: int=7,
         first_stride: tuple[int, int] = (1, 1),
         frequency_bins_num: int = 256,
         fwse_hidden_dim: int = 128,
@@ -187,7 +219,6 @@ class LocalFeatureExtractorModule(nn.Module):
         use_frequency_encoding: bool = False,
         repeat_num: int = 4,
     ):
-        assert repeat_num > 1, f"repeat_num must be greater than 1, but got {repeat_num}"
         blocks: list[LocalFeatureExtracterBlock] = []
         for _ in range(repeat_num):
             blocks.append(
@@ -517,10 +548,13 @@ if __name__ == "__main__":
         activation="relu",
         lfe_fwse_hidden_dim=128,
         lfe_use_frequency_encoding=True,
-        gfe_hidden_channels=1024,
-        gfe_out_channels=1536,
-        state_pool_hidden_channels=256
+        gfe_hidden_channels=512,
+        gfe_out_channels=756,
+        state_pool_hidden_channels=256,
+        local_feature_repeat_list=[2, 2, 2, 2, 2]
     )
     model.eval()
     out = model(spec)
     print("#ecapa2 (batch, speaker_emb_dim)", out.shape)
+    print(out)
+    print(spec.min(), spec.max())

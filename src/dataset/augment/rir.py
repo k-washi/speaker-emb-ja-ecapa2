@@ -17,13 +17,10 @@ class RIRAugment(torch.nn.Module):
         self.cfg = cfg
         self.rir_dir = Path(cfg.rir_dir)
         assert self.rir_dir.exists(), f"Directory not found: {self.rir_dir}"
-        self.audio_fp_list = list(self.rir_dir.glob("**/*"))
-        self.prob = cfg.init_prob
+        self.audio_fp_list = [s for s in list(self.rir_dir.glob("**/*")) if s.is_file()]
+        self.prob = cfg.prob
         self.sample_rate = sample_rate
         self.max_length = int(sample_rate * cfg.max_rir_sec)
-    
-    def update_prob(self):
-        self.prob = self.cfg.update_prob
     
     def forward(self, audio: torch.Tensor):
         if torch.rand((1)).item() > self.prob:
@@ -35,12 +32,17 @@ class RIRAugment(torch.nn.Module):
             audio = audio.unsqueeze(0)
             
         rir_fp = random.choice(self.audio_fp_list)
-        rir, _ = load_wave(rir_fp, sample_rate=self.sample_rate)
+        rir, _ = load_wave(rir_fp, sample_rate=self.sample_rate, mono=True)
+        rir = rir.unsqueeze(0)
         rir = rir[:, :self.max_length]
         rir = rir / torch.linalg.vector_norm(rir, ord=2)
+        if rir.abs().max() == 0:
+            # 0のとき、convolveでaudioがnanになる
+            return audio
         audio = aF.fftconvolve(audio, rir)
         if unsqueeze:
             audio = audio.squeeze(0)
+        assert audio.abs().max() >= 0, f"Invalid audio: {audio.abs().max()}"
         return audio
 
 if __name__ == "__main__":

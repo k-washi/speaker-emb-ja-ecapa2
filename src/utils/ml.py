@@ -18,3 +18,9 @@ def set_seed(seed: int = 3407):
 
     torch.use_deterministic_algorithms = True
     torch.backends.cudnn.deterministic = True  # True:再現性は上がるが、処理パフォーマンスが低下
+
+
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)

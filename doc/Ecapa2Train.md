@@ -31,3 +31,10 @@ transcriptionには、漢字仮名交じり文が記載されています。（w
 ```bash
 python ./src/dataset/utils/create_userlist.py --dataset_dir sv_dataset1/  --output_dir data/userlist/ --train_ratio 0.975
 ```
+
+
+# 訓練
+
+```bash
+python ./src/experiments/ecapa2/exp00001/train00001.py
+```

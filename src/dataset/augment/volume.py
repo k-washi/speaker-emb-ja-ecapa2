@@ -34,6 +34,7 @@ class VolumeAugment(torch.nn.Module):
         
         mul_param_index = torch.randint(0, len(self.volume_mul_params), size=(1,)).item()
         mul_param = self.volume_mul_params[mul_param_index]
-        assert np.abs(x).max() > 0, "volume_max should be greater than 0"
-        x = x / np.abs(x).max() * mul_param
+        max_val = x.abs().max()
+        assert max_val.item() > 0, f"volume_max should be greater than 0, {x}"
+        x = x / max_val  * mul_param
         return x

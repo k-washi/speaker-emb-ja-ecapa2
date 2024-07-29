@@ -16,6 +16,13 @@ def parser_user_list(
     for dataset_dir in dataset_dir_list:
         dataset_dir = Path(dataset_dir)
         user_list += list(dataset_dir.glob("*"))
+    tmp_user_list = []
+    for user_dir in tqdm(user_list):
+        wav_list = list(user_dir.glob("wav/*"))
+        if len(wav_list) == 0:
+            continue
+        tmp_user_list.append(user_dir)
+    user_list = tmp_user_list
     user_list = sorted(user_list, key=lambda x: x.name)
     print(f"Total users: {len(user_list)}")
     

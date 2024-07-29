@@ -142,3 +142,6 @@ data.dvc
 checkpoints/
 results/
 nohup/
+wandb/
+lightning_logs/
+logs/

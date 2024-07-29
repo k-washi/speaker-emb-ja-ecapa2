@@ -11,10 +11,7 @@ class TimeFreqMasking(torch.nn.Module):
         self.cfg = cfg
         self.time_masking = T.TimeMasking(cfg.time_mask_max)
         self.freq_masking = T.FrequencyMasking(cfg.freq_mask_max)
-        self.prob = cfg.init_prob
-    
-    def update_prob(self):
-        self.prob = self.cfg.update_prob
+        self.prob = cfg.prob
     
     def forward(self, x: torch.Tensor):
         if torch.rand((1)).item() > self.prob:
