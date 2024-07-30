@@ -28,7 +28,6 @@ EXP_ID = "ecapa2"
 WANDB_PROJECT_NAME = "speaker_verfication_ecapa2"
 IS_LOGGING = True
 FAST_DEV_RUN = False
-LOGGING_INTERVAL_STEP = 1000
 
 LOG_SAVE_DIR = f"logs/{EXP_ID}_{VERSION}"
 model_save_dir = f"{LOG_SAVE_DIR}/ckpt"
@@ -138,7 +137,6 @@ def train():
             profiler=cfg.ml.profiler,
             fast_dev_run=FAST_DEV_RUN,
             check_val_every_n_epoch=cfg.ml.check_val_every_n_epoch,
-            log_every_n_steps=LOGGING_INTERVAL_STEP,
             logger=wandb_logger,
             callbacks=callback_list,
             num_sanity_val_steps=2
