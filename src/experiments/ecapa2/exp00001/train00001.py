@@ -23,7 +23,7 @@ seed_everything(cfg.ml.seed)
 # PARAMS #
 ##########
 
-VERSION = "00001"
+VERSION = "00003"
 EXP_ID = "ecapa2"
 WANDB_PROJECT_NAME = "speaker_verfication_ecapa2"
 IS_LOGGING = True
