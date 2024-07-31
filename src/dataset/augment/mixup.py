@@ -46,18 +46,13 @@ def mixup(
     elif x0_length < x1_length:
         x1 = x1[:, :x0_length]
     if spec_normalize:
-        try:
+        if x0.abs().sum() > 0:
             x0 = x0 / torch.mean(torch.linalg.norm(x0, ord=2, dim=0))
+
+        if x1.abs().sum() > 0:
             x1 = x1 / torch.mean(torch.linalg.norm(x1, ord=2, dim=0))
-        except Exception as e:
-            print(f"Error: {e}")
-            print(f"x0: {x0.size()}, x1: {x1.size()}")
-            print(f"x0: {x0.min()}, {x0.max()}, x1: {x1.min()}, {x1.max()}")
-            #print(f"x0: {x0}")
-            #print(f"x1: {x1}")
-            raise ValueError("Error in mixup")
+
     mixed_x = mixup_lambda * x0 + (1 - mixup_lambda) * x1
-    
     y0 = torch.nn.functional.one_hot(torch.tensor(y0), num_classes=num_classes)
     y1 = torch.nn.functional.one_hot(torch.tensor(y1), num_classes=num_classes)
     mixed_y = mixup_lambda * y0 + (1 - mixup_lambda) * y1

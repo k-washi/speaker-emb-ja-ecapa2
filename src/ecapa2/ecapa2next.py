@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 def get_activation(activation: str):
     if activation == "relu":
@@ -8,6 +9,21 @@ def get_activation(activation: str):
         return nn.GELU()
     else:
         raise NotImplementedError(f"activation {activation} is not implemented")
+
+class LayerNorm(nn.Module):
+    def __init__(self, channels, eps=1e-5):
+        super().__init__()
+        self.channels = channels
+        self.eps = eps
+
+        self.gamma = nn.Parameter(torch.ones(channels))
+        self.beta = nn.Parameter(torch.zeros(channels))
+
+    def forward(self, x):
+        x = x.transpose(1, -1)
+        x = F.layer_norm(x, (self.channels,), self.gamma, self.beta, self.eps)
+        return x.transpose(1, -1)
+    
 
 class DepthwiseConv2dBlock(nn.Module):
     def __init__(
@@ -119,7 +135,7 @@ class LocalFeatureExtracterBlock(nn.Module):
             stride=first_stride,
             bias=True
         )
-        self.ln = nn.LayerNorm(in_channels, eps=1e-4)
+        self.ln = LayerNorm(in_channels, eps=1e-4)
         self.conv2d_2 = Conv2dBlock(
             in_channels=in_channels,
             out_channels=out_channels,
@@ -162,9 +178,7 @@ class LocalFeatureExtracterBlock(nn.Module):
         if self.freq_encoding is not None:
             w = w + self.freq_encoding
         w = self.conv2d_1(w)
-        w = w.permute(0, 2, 3, 1)
         w = self.ln(w)
-        w = w.permute(0, 3, 1, 2)
         w = self.conv2d_2(w)
         w = self.conv2d_3(w)
         w = self.fwse(w)
@@ -474,11 +488,11 @@ class ChannelDependentStaticsPooling(nn.Module):
         globalx = torch.cat((
             x,
             torch.mean(x, dim=2, keepdim=True).expand(-1, -1, t), # 時間方向に圧縮した平均をt個拡張
-            torch.sqrt(torch.var(x, dim=2, keepdim=True)).expand(-1, -1, t), # 時間方向に圧縮した分散をt個拡張
+            torch.sqrt(torch.var(x, dim=2, keepdim=True).clamp(min=1e-4)).expand(-1, -1, t), # 時間方向に圧縮した分散をt個拡張
         ), dim=1) # (B, C*3, T)
         w = self.attention(globalx)
         mu = torch.sum(x * w, dim=2)
-        sg = torch.sqrt(torch.sum((x**2) * w, dim=2) - mu**2).clamp(min=1e-4)
+        sg = torch.sqrt((torch.sum((x**2) * w, dim=2) - mu**2).clamp(min=1e-4))
         return mu, sg
 
 class ECAPA2(nn.Module):

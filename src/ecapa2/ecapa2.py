@@ -443,11 +443,11 @@ class ChannelDependentStaticsPooling(nn.Module):
         globalx = torch.cat((
             x,
             torch.mean(x, dim=2, keepdim=True).expand(-1, -1, t), # 時間方向に圧縮した平均をt個拡張
-            torch.sqrt(torch.var(x, dim=2, keepdim=True)).expand(-1, -1, t), # 時間方向に圧縮した分散をt個拡張
+            torch.sqrt(torch.var(x, dim=2, keepdim=True).clamp(min=1e-4)).expand(-1, -1, t), # 時間方向に圧縮した分散をt個拡張
         ), dim=1) # (B, C*3, T)
         w = self.attention(globalx)
         mu = torch.sum(x * w, dim=2)
-        sg = torch.sqrt(torch.sum((x**2) * w, dim=2) - mu**2).clamp(min=1e-4)
+        sg = torch.sqrt((torch.sum((x**2) * w, dim=2) - mu**2).clamp(min=1e-4))
         return mu, sg
 
 class ECAPA2(nn.Module):

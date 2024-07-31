@@ -34,7 +34,7 @@ class MixupAAMsoftmax(nn.Module):
         mm = torch.sin(math.pi - self.m * mixup_lambda) * self.m * mixup_lambda
         
         phi = cosine * cos_m - sine * sin_m # cos(theta + m * lamba) = cos(theta)cos(m*lamda) - sin(theta)sin(m*lambda)
-        phi = torch.where((cosine - th) > 0, phi, cosine - mm)
+        phi = torch.where(cosine > th, phi, cosine - mm)
         return phi
     
     def multi_label_forward(self, x, label1, label2, mixup_lambda):
@@ -52,37 +52,31 @@ class MixupAAMsoftmax(nn.Module):
         """
         #phiは、マージンを適応したcosine (cos(theta + m))
         cosine = F.linear(F.normalize(x), F.normalize(self.weight)) # (B, n_class:7836)
-        sine = torch.sqrt((1.0 - torch.mul(cosine, cosine)).clamp(0, 1))
+        sine = torch.sqrt((1.0 - torch.pow(cosine, 2)).clamp(0, 1))
         phi1 = self.create_phi(cosine, sine, mixup_lambda)
         phi2 = self.create_phi(cosine, sine, 1 - mixup_lambda)
-        
         one_hot1 = torch.zeros_like(cosine)
-        one_hot1.scatter_(1, label1.view(-1, 1), 1)
+        one_hot1 = one_hot1.scatter_(1, label1.view(-1, 1).long(), 1)
         one_hot2 = torch.zeros_like(cosine)
-        one_hot2.scatter_(1, label2.view(-1, 1), 1)
+        one_hot2 = one_hot2.scatter_(1, label2.view(-1, 1).long(), 1)
         # 正解ラベルの部分のみphiを適用
-        other_one_hot = torch.ones_like(cosine) - one_hot1 - one_hot2
-        output = (one_hot1 * phi1) + (one_hot2 * phi2) + (other_one_hot * cosine)
+        other_one_hot = (torch.ones_like(cosine).long() - one_hot1 - one_hot2).clamp(0, 1)
+        output = one_hot1 * phi1 + one_hot2 * phi2 + other_one_hot * cosine
         output = output * self.s
         
         # create label
         one_hot_label = mixup_lambda * one_hot1 + (1 - mixup_lambda) * one_hot2
-        #
-        output = F.log_softmax(output, dim=1)
         loss = self.ce(output, one_hot_label)
-
         return loss, output
 
     def one_label_forward(self, x, label1):
         cosine = F.linear(F.normalize(x), F.normalize(self.weight))
-        sine = torch.sqrt((1.0 - torch.mul(cosine, cosine)).clamp(0, 1))
+        sine = torch.sqrt((1.0 - torch.mul(cosine, cosine)).clamp(1e-4, 1))
         phi1 = self.create_phi(cosine, sine, 1)
         one_hot1 = torch.zeros_like(cosine)
         one_hot1.scatter_(1, label1.view(-1, 1), 1)
         output = one_hot1 * phi1 + (1 - one_hot1) * cosine
         output = output * self.s
-        
-        output = F.log_softmax(output, dim=1)
         loss = self.ce(output, label1)
         return loss, output
         

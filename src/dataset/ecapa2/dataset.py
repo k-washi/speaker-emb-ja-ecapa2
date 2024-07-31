@@ -67,6 +67,7 @@ class Ecapa2Dataset(Dataset):
             while True:
                 try:
                     audio1, label_id1, spec1 = self.process(idx)
+                    assert spec1.abs().sum() > 0, f"spec1 all 0: {spec1}"
                     break
                 except Exception as e:
                     print(f"Error: {e}")
@@ -82,11 +83,11 @@ class Ecapa2Dataset(Dataset):
                 
             # Mixup
             mixup_lambda = get_mixup_lambda(alpha=self.cfg.augment.mixup.alpha, beta=self.cfg.augment.mixup.beta)
-            
             while True:
                 try:
                     random_index = torch.randint(0, len(self), (1,)).item()
                     audio2, label_id2, spec2 = self.process(random_index)
+                    assert spec2.abs().sum() > 0, f"spec2 all 0: {spec2}"
                     break
                 except Exception as e:
                     print(f"Error: {e}")
@@ -99,6 +100,7 @@ class Ecapa2Dataset(Dataset):
             if mixed_spec.dim() == 2:
                 mixed_spec = mixed_spec.unsqueeze(0) # (1, freq_bins, time_steps)
             mixed_spec = spec_max_random_normalization(mixed_spec)
+            assert mixed_spec.isnan().sum() == 0, f"mixed_spec contains NaN: {mixed_spec}"
             return mixed_spec, label_id1, label_id2, mixup_lambda, (audio1, audio2)
     
     

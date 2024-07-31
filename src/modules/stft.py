@@ -8,6 +8,8 @@ import librosa.util as librosa_util
 
 def spec_max_random_normalization(spec: torch.Tensor, min_value=0.5, max_value=1) -> torch.Tensor:
     random_value = (max_value - min_value) * torch.rand((1)).item() + min_value
+    if spec.max() == 0:
+        return spec
     return spec / spec.max() * random_value
 
 def window_sumsquare(window, n_frames, hop_length=200, win_length=800,
