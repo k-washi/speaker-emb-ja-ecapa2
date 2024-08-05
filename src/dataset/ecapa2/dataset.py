@@ -19,7 +19,7 @@ from src.modules.stft import (
     OnnxSTFT,
     spec_max_random_normalization
 )
-
+from src.utils.audio import spec_to_mel_torch
 
 
 class Ecapa2Dataset(Dataset):
@@ -30,7 +30,8 @@ class Ecapa2Dataset(Dataset):
         config: DatasetConfig,
         num_classes: int,
         is_augment: bool=False,
-        is_mixup: bool=False
+        is_mixup: bool=False,
+        is_mel: bool=False
     ):
         super().__init__()
         self.audio_fp_list = audio_fp_list
@@ -47,6 +48,9 @@ class Ecapa2Dataset(Dataset):
             win_length=config.audio.win_length,
         )
         self.is_mixup = is_mixup
+        
+        self.is_mel = is_mel
+        self.audio_config = config.audio
         
     def __len__(self):
         return len(self.audio_fp_list)
@@ -78,8 +82,19 @@ class Ecapa2Dataset(Dataset):
                 if spec1.dim() == 3:
                     spec1 = spec1.squeeze(0)
                 # spec1 = (spec1 / torch.linalg.norm(spec1, ord=2)).unsqueeze(0)
+                if self.is_mel:
+                    spec1 = spec_to_mel_torch(
+                        spec1,
+                        n_fft=self.audio_config.n_fft,
+                        num_mels=self.audio_config.n_mels,
+                        sampling_rate=self.audio_config.sample_rate, 
+                        fmin=self.audio_config.fmin, 
+                        fmax=self.audio_config.fmax
+                    )
+                if self.aug is not None:
+                    spec1 = self.aug.pt_spec_process(spec1)
                 spec1 = spec_max_random_normalization(spec1).unsqueeze(0)
-                return spec1, label_id1, label_id1, torch.tensor([1.0]), (audio1, audio1)
+                return spec1, label_id1, label_id1, torch.tensor(1.0), (audio1, audio1)
                 
             # Mixup
             mixup_lambda = get_mixup_lambda(alpha=self.cfg.augment.mixup.alpha, beta=self.cfg.augment.mixup.beta)
@@ -93,12 +108,28 @@ class Ecapa2Dataset(Dataset):
                     print(f"Error: {e}")
                     print(f"Error fp: {self.audio_fp_list[random_index]}")
                     continue
-            mixed_spec, _ = mixup(
-                spec1, label_id1, spec2, label_id2, mixup_lambda, self.num_classes,
-                spec_normalize=self.cfg.augment.mixup.spec_normalize
-            )
+            if label_id1 == label_id2:
+                mixup_lambda = torch.tensor(1.0)
+                mixed_spec = spec1
+                audio2 = audio1
+            else:
+                mixed_spec, _ = mixup(
+                    spec1, label_id1, spec2, label_id2, mixup_lambda, self.num_classes,
+                    spec_normalize=self.cfg.augment.mixup.spec_normalize
+                )
             if mixed_spec.dim() == 2:
                 mixed_spec = mixed_spec.unsqueeze(0) # (1, freq_bins, time_steps)
+            if self.is_mel:
+                mixed_spec = spec_to_mel_torch(
+                    mixed_spec,
+                    n_fft=self.audio_config.n_fft,
+                    num_mels=self.audio_config.n_mels,
+                    sampling_rate=self.audio_config.sample_rate, 
+                    fmin=self.audio_config.fmin, 
+                    fmax=self.audio_config.fmax
+                )
+            if self.aug is not None:
+                mixed_spec = self.aug.pt_spec_process(mixed_spec)
             mixed_spec = spec_max_random_normalization(mixed_spec)
             assert mixed_spec.isnan().sum() == 0, f"mixed_spec contains NaN: {mixed_spec}"
             return mixed_spec, label_id1, label_id2, mixup_lambda, (audio1, audio2)
@@ -152,8 +183,7 @@ class Ecapa2Dataset(Dataset):
                 start = random.randint(0, audio.size(-1) - max_length)
                 audio = audio[:, start:start+max_length]
         spec, _ = self.stft.transform(audio)
-        if self.aug is not None:
-            spec = self.aug.pt_spec_process(spec)
+
         return audio, label_id, spec
 
 if __name__ == "__main__":
@@ -166,7 +196,8 @@ if __name__ == "__main__":
         DatasetConfig(),
         num_classes=4,
         is_augment=True,
-        is_mixup=True
+        is_mixup=True,
+        is_mel=True
     )
     output_dir = Path("data") / "augment" / "dataset"
     output_dir.mkdir(exist_ok=True, parents=True)

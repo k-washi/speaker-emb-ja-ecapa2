@@ -68,6 +68,7 @@ class AugmentConfig:
     codec: AugCodecConfig = field(default_factory=lambda: AugCodecConfig())
     mixup: AugMixupConfig = field(default_factory=lambda: AugMixupConfig())
     maxlen: AugAudioMaxLengthConfig = field(default_factory=lambda: AugAudioMaxLengthConfig())
+
 @dataclass
 class AudioConfig:
     sample_rate: int = 16000
@@ -76,6 +77,9 @@ class AudioConfig:
     hop_length: int = 160
     max_length: int = int(16000 * 2)
     num_classes: int = 7839
+    n_mels: int = 80
+    fmin: int = 80
+    fmax: int = 7600
 
 
 @dataclass

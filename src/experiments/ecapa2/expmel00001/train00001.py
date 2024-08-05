@@ -6,8 +6,8 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 from dataclasses import asdict
 
-from src.ecapa2.pl_model_e2next import Ecapa2ModelModule
-from src.dataset.ecapa2.pl_dataset import Ecapa2DatasetModule
+from src.ecapa2.pl_model_e2nextmel import Ecapa2ModelModule
+from src.dataset.ecapa2.pl_dataset_mel import Ecapa2DatasetModule
 from src.experiments.utils.pl_callbacks import CheckpointEveryEpoch
 from src.experiments.utils.utils import get_audiofp_and_label_list_from_userlist_file
 
@@ -25,10 +25,10 @@ seed_everything(cfg.ml.seed)
 
 
 
-VERSION = "00008"
-EXP_ID = "ecapa2"
+VERSION = "00001"
+EXP_ID = "ecapa2_mel"
 WANDB_PROJECT_NAME = "speaker_verfication_ecapa2"
-IS_LOGGING = False
+IS_LOGGING = True
 FAST_DEV_RUN = False
 
 LOG_SAVE_DIR = f"logs/{EXP_ID}_{VERSION}"
@@ -46,19 +46,21 @@ valid_audiofp_list, valid_label_list = get_audiofp_and_label_list_from_userlist_
 ############
 ############
 
-cfg.ml.num_epochs = 50
-cfg.ml.batch_size = 22
+cfg.ml.num_epochs = 100
+cfg.ml.batch_size = 40
 cfg.ml.num_workers = 8
-cfg.ml.accumulate_grad_batches = 1 # batch_size * accumulate_grad_batches = 506 ~ 512
+cfg.ml.accumulate_grad_batches = 13 # batch_size * accumulate_grad_batches = 506 ~ 512
 cfg.ml.grad_clip_val = 100
 cfg.ml.check_val_every_n_epoch = 1
 cfg.ml.early_stopping.patience = 500
 cfg.ml.early_stopping.mode = "min"
 cfg.ml.early_stopping.monitor = "val_eer"
-cfg.ml.mix_precision = 16 # 16 or 32, bf16
+cfg.ml.mix_precision = "bf16" # 16 or 32, bf16
+
+
 
 cfg.ml.optimizer.lr = 1e-3 # ft: 1e-5
-cfg.ml.optimizer.eps = 1e-4
+cfg.ml.optimizer.eps = 1e-8
 cfg.ml.optimizer.lr_min = 1e-5
 cfg.ml.optimizer.t_initial = 10
 cfg.ml.optimizer.warm_up_init = 0 # pretrained modelの場合は0
@@ -67,10 +69,11 @@ cfg.ml.optimizer.warmup_prefix = False # pretrained modelの場合はFalse
 
 # model
 cfg.model.mmas.m = 0.2 # ft: 0.4
+cfg.model.ecapa2.frequency_bins_num = 80
 cfg.model.ecapa2.lfe_use_frequency_encoding = False # Falseでも性能良いかも
 cfg.model.ecapa2.gfe_hidden_channels = 512
 cfg.model.ecapa2.gfe_out_channels = 768
-cfg.model.ecapa2.local_feature_repeat_list = [2, 2, 2, 2, 2]
+cfg.model.ecapa2.local_feature_repeat_list = [2, 2, 2]
 cfg.model.ecapa2.activation = "gelu"
 
 # dataset
@@ -78,14 +81,21 @@ cfg.model.ecapa2.activation = "gelu"
 cfg.dataset.audio.sample_rate = 16000
 cfg.dataset.audio.max_length = int(2 * cfg.dataset.audio.sample_rate)
 cfg.dataset.audio.num_classes = num_classes
+cfg.dataset.audio.n_mels = 80 # == cfg.model.ecapa2.frequency_bins_num
+cfg.dataset.audio.n_fft = 512
+
 
 # augment
 cfg.dataset.augment.maxlen.prob = 0 # ft: 0.4
 cfg.dataset.augment.time_stretch.prob = 0.6 # ft: 0.2
-cfg.dataset.augment.noise.prob = 0.8 # ft: 0
-cfg.dataset.augment.rir.prob = 0.8 # ft: 0
-cfg.dataset.augment.tfmask.prob = 0.8 # ft: 0
-cfg.dataset.augment.codec.prob = 0.5 # ft: 0.2
+cfg.dataset.augment.noise.prob = 0.6 # ft: 0
+cfg.dataset.augment.noise.min_snr = 5
+cfg.dataset.augment.noise.max_noise_num = 1
+cfg.dataset.augment.rir.prob = 0.6 # ft: 0
+cfg.dataset.augment.tfmask.prob = 0.6 # ft: 0
+cfg.dataset.augment.tfmask.freq_mask_max = 10
+cfg.dataset.augment.tfmask.time_mask_max = 5
+cfg.dataset.augment.codec.prob = 0.2 # ft: 0.2
 
 
 def train():
