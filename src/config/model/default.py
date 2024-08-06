@@ -16,7 +16,12 @@ class Ecapa2Config:
 class AAMSoftmaxConfig:
     m: float = 0.2
     s: float = 30.0
-
+    k: int = 1
+    elastic: bool = False
+    elastic_std: float = 0.0125
+    elastic_plus: bool = False
+    focal_loss: bool = False
+    focal_loss_gamma: int = 2
 @dataclass
 class ExpConfig:
     val_spkemb_output_dir: str = "/data/val_spkemb"

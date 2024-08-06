@@ -48,7 +48,13 @@ class Ecapa2ModelModule(LightningModule):
             n_class=config.dataset.audio.num_classes,
             hidden_size=mc.ecapa2.speaker_emb_dim,
             m=mc.mmas.m,
-            s=mc.mmas.s
+            s=mc.mmas.s,
+            k=mc.mmas.k,
+            elastic=mc.mmas.elastic,
+            elastic_std=mc.mmas.elastic_std,
+            elastic_plus=mc.mmas.elastic_plus,
+            focal_loss=mc.mmas.focal_loss,
+            focal_loss_gamma=mc.mmas.focal_loss_gamma
         )
         
         self._val_spkemb_output_dir = Path(mc.exp.val_spkemb_output_dir)

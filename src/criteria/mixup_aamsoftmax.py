@@ -7,9 +7,22 @@ from typing import List
 import torch, math
 import torch.nn as nn
 import torch.nn.functional as F
+from src.criteria.focal_loss import FocalLoss
 
 class MixupAAMsoftmax(nn.Module):
-    def __init__(self, n_class, hidden_size=64, m=0.2, s=30):
+    def __init__(
+        self, 
+        n_class, 
+        hidden_size=64, 
+        m=0.2, 
+        s=30,
+        k=1,
+        elastic=False,
+        elastic_std=0.0125,
+        elastic_plus=False,
+        focal_loss=False,
+        focal_loss_gamma=2
+    ):
         """AAMsoftmax loss function
 
         Args:
@@ -22,20 +35,43 @@ class MixupAAMsoftmax(nn.Module):
         super(MixupAAMsoftmax, self).__init__()
         self.m = m
         self.s = s
-        self.weight = torch.nn.Parameter(torch.FloatTensor(n_class, hidden_size), requires_grad=True) # (out_features, in_features)
-        self.ce = nn.CrossEntropyLoss()
+        if s is None or s <= 0:
+            self.s = math.sqrt(2) * math.log(n_class - 1)
+        self.k = k
+        self.n_class = n_class
+        self.weight = torch.nn.Parameter(torch.FloatTensor(n_class*k, hidden_size), requires_grad=True) # (out_features, in_features)
         nn.init.xavier_normal_(self.weight, gain=1)
+        
+        if focal_loss:
+            self.ce = FocalLoss(gamma=focal_loss_gamma)
+        else:
+            self.ce = nn.CrossEntropyLoss()
+        
+        self.elastic = elastic
+        self.elastic_std = elastic_std
+        self.elastic_plus = elastic_plus
 
-    def create_phi(self, cosine, sine, mixup_lambda):
+    def create_phi(self, cosine, sine, mixup_lambda, m):
         # params
-        cos_m = torch.cos(self.m * mixup_lambda)
-        sin_m = torch.sin(self.m * mixup_lambda)
-        th = torch.cos(math.pi - self.m * mixup_lambda)
-        mm = torch.sin(math.pi - self.m * mixup_lambda) * self.m * mixup_lambda
+        cos_m = torch.cos(m * mixup_lambda)
+        sin_m = torch.sin(m * mixup_lambda)
+        th = torch.cos(math.pi - m * mixup_lambda)
+        mm = torch.sin(math.pi - m * mixup_lambda) * m * mixup_lambda
         
         phi = cosine * cos_m - sine * sin_m # cos(theta + m * lamba) = cos(theta)cos(m*lamda) - sin(theta)sin(m*lambda)
         phi = torch.where(cosine > th, phi, cosine - mm)
         return phi
+    
+    def elastic_margin(self, cosine, m):
+        # https://zenn.dev/primenumber/articles/5a6b6da01aaafb
+        m = torch.normal(mean=m, std=self.elastic_std, size=cosine.size()).to(cosine.device)
+        if self.training and self.elastic_plus:
+            with torch.no_grad():
+                distmat = cosine.detach().clone()
+                _, ori_indices = torch.sort(distmat, dim=0, descending=True)
+                m, _ = torch.sort(m, dim=0)
+                m = m[ori_indices]
+        return m
     
     def multi_label_forward(self, x, label1, label2, mixup_lambda):
         """
@@ -52,9 +88,15 @@ class MixupAAMsoftmax(nn.Module):
         """
         #phiは、マージンを適応したcosine (cos(theta + m))
         cosine = F.linear(F.normalize(x), F.normalize(self.weight)) # (B, n_class:7836)
+        if self.k > 1:
+            cosine = torch.reshape(cosine, (-1, self.n_class, self.k)) # (B, n_class, k)
+            cosine, _ = torch.max(cosine, axis=2) # (B, n_class)
         sine = torch.sqrt((1.0 - torch.pow(cosine, 2)).clamp(0, 1))
-        phi1 = self.create_phi(cosine, sine, mixup_lambda)
-        phi2 = self.create_phi(cosine, sine, 1 - mixup_lambda)
+        m = self.m
+        if self.elastic:
+            m = self.elastic_margin(cosine, m)
+        phi1 = self.create_phi(cosine, sine, mixup_lambda, m)
+        phi2 = self.create_phi(cosine, sine, 1 - mixup_lambda, m)
         one_hot1 = torch.zeros_like(cosine)
         one_hot1 = one_hot1.scatter_(1, label1.view(-1, 1).long(), 1)
         one_hot2 = torch.zeros_like(cosine)
@@ -71,8 +113,14 @@ class MixupAAMsoftmax(nn.Module):
 
     def one_label_forward(self, x, label1):
         cosine = F.linear(F.normalize(x), F.normalize(self.weight))
+        if self.k > 1:
+            cosine = torch.reshape(cosine, (-1, self.n_class, self.k)) # (B, n_class, k)
+            cosine, _ = torch.max(cosine, axis=2) # (B, n_class)
         sine = torch.sqrt((1.0 - torch.mul(cosine, cosine)).clamp(1e-4, 1))
-        phi1 = self.create_phi(cosine, sine, 1)
+        m = self.m
+        if self.elastic:
+            m = self.elastic_margin(cosine, m)
+        phi1 = self.create_phi(cosine, sine, 1, m)
         one_hot1 = torch.zeros_like(cosine)
         one_hot1.scatter_(1, label1.view(-1, 1), 1)
         output = one_hot1 * phi1 + (1 - one_hot1) * cosine
