@@ -70,7 +70,7 @@ class MixupAAMsoftmax(nn.Module):
                 distmat = cosine.detach().clone()
                 _, ori_indices = torch.sort(distmat, dim=0, descending=True)
                 m, _ = torch.sort(m, dim=0)
-                m = m[ori_indices]
+                m = torch.gather(m, 0, ori_indices)
         return m
     
     def multi_label_forward(self, x, label1, label2, mixup_lambda):

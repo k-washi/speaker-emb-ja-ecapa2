@@ -30,7 +30,7 @@ seed_everything(cfg.ml.seed)
 VERSION = "00021"
 EXP_ID = "ecapa2_mel"
 WANDB_PROJECT_NAME = "speaker_verfication_ecapa2"
-IS_LOGGING = False
+IS_LOGGING = True
 FAST_DEV_RUN = False
 
 LOG_SAVE_DIR = f"logs/{EXP_ID}_{VERSION}"
@@ -49,7 +49,7 @@ valid_audiofp_list, valid_label_list = get_audiofp_and_label_list_from_userlist_
 ############
 
 cfg.ml.num_epochs = 100
-cfg.ml.batch_size = 70
+cfg.ml.batch_size = 40
 cfg.ml.num_workers = 8
 cfg.ml.accumulate_grad_batches = 13 # batch_size * accumulate_grad_batches = 506 ~ 512
 cfg.ml.grad_clip_val = 10000
@@ -77,7 +77,7 @@ cfg.model.ecapa2.gfe_hidden_channels = 1024
 cfg.model.ecapa2.gfe_out_channels = 1536
 cfg.model.ecapa2.local_feature_repeat_list = [2, 2, 2]
 cfg.model.ecapa2.activation = "gelu"
-cfg.model.ecapa2.speaker_emb_dim = 512
+cfg.model.ecapa2.speaker_emb_dim = 192
 
 # loss
 cfg.model.mmas.s = -1
