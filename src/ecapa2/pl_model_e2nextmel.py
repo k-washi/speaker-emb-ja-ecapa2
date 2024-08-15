@@ -197,12 +197,25 @@ class Ecapa2ModelModule(LightningModule):
                 "weight_decay": 0.0,
             },
         ]
-        self.optimizer = torch.optim.AdamW(
-                optimizer_grouped_parameters,
-                lr=self.config.ml.optimizer.lr,
-                eps=self.config.ml.optimizer.eps,
-                betas=self.config.ml.optimizer.betas,
-            )
+        if self.config.ml.optimizer.optimizer == "adamw":
+            self.optimizer = torch.optim.AdamW(
+                    optimizer_grouped_parameters,
+                    lr=self.config.ml.optimizer.lr,
+                    eps=self.config.ml.optimizer.eps,
+                    betas=self.config.ml.optimizer.betas,
+                )
+        elif self.config.ml.optimizer.optimizer == "adan":
+            from extlib.adan.adan import Adan
+            self.optimizer = Adan(
+                    optimizer_grouped_parameters,
+                    lr=self.config.ml.optimizer.lr,
+                    eps=self.config.ml.optimizer.eps,
+                    betas=self.config.ml.optimizer.betas,
+                    weight_decay=self.config.ml.optimizer.weight_decay,
+                    fused=self.config.ml.optimizer.fused,
+                )
+        else:
+            raise ValueError(f"Invalid optimizer: {self.config.ml.optimizer.optimizer}")
 
         self.scheduler  = CosineLRScheduler(
             self.optimizer,

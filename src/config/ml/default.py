@@ -34,6 +34,7 @@ class Optimizer:
     warm_up_init:float = 0 #1e-7
     warm_up_t:int = 0 # 2
     warmup_prefix:bool = False # True
+    fused:bool = False
 
 @dataclass()
 class MLConfig:

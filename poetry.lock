@@ -12,6 +12,19 @@ files = [
 ]
 
 [[package]]
+name = "adan"
+version = "0.0.2"
+description = "Adan: Adaptive Nesterov Momentum Algorithm for Faster Optimizing Deep Models"
+optional = false
+python-versions = ">=3.8"
+files = []
+develop = true
+
+[package.source]
+type = "directory"
+url = "extlib/adan"
+
+[[package]]
 name = "aiohttp"
 version = "3.9.5"
 description = "Async http client/server framework (asyncio)"
@@ -3962,4 +3975,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "fdc9cbe1172c9c8b10c6177fd385bda98e61242c4fbfb1e1b1edc751f28343e1"
+content-hash = "f06ffd39cd1ee209a830f7126d8a28b37c05c9c3adc9cfd119931cd7e29e7677"
