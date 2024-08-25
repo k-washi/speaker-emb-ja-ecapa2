@@ -30,7 +30,7 @@ seed_everything(cfg.ml.seed)
 VERSION = "00023"
 EXP_ID = "ecapa2_mel_ft"
 WANDB_PROJECT_NAME = "speaker_verfication_ecapa2"
-IS_LOGGING = False
+IS_LOGGING = True
 FAST_DEV_RUN = False
 PRE_MODEL = "logs/ecapa2_mel_00023/ckpt/ckpt-48/ecapa2.ckpt"
 
