@@ -58,7 +58,7 @@ class Ecapa2ModelModule(LightningModule):
         )
         
         self._val_spkemb_output_dir = Path(mc.exp.val_spkemb_output_dir)
-    
+        self._current_step = 0
     def training_step(self, batch, batch_idx):
         self.model.train()
         x, label1, label2, mixup_lambda = batch
@@ -227,7 +227,15 @@ class Ecapa2ModelModule(LightningModule):
             warmup_lr_init=self.config.ml.optimizer.warm_up_init,
             warmup_prefix=self.config.ml.optimizer.warmup_prefix,
         )
-        return [self.optimizer], [self.scheduler]
+        return {
+            "optimizer": self.optimizer,
+            "lr_scheduler": {
+                "scheduler": self.scheduler,
+                "interval": "step",
+                "frequency": 1,
+            },
+        }
     
     def lr_scheduler_step(self, scheduler, metric: Any | None) -> None:
-        return scheduler.step(self.current_epoch)
+        self._current_step += 1
+        return scheduler.step(self._current_step)
