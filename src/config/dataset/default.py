@@ -72,7 +72,7 @@ class AugmentConfig:
 @dataclass
 class AudioConfig:
     sample_rate: int = 16000
-    n_fft: int = 510
+    n_fft: int = 512
     win_length: int = 400
     hop_length: int = 160
     max_length: int = int(16000 * 2)

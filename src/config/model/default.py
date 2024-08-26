@@ -13,6 +13,12 @@ class Ecapa2Config:
     local_feature_repeat_list: list[int] = field(default_factory=lambda: [3, 4, 4, 4, 5])
 
 @dataclass
+class EcapaTDNNConfig:
+    frequency_bins_num: int = 80
+    channel_size: int = 1024
+    hidden_size: int = 192
+
+@dataclass
 class AAMSoftmaxConfig:
     m: float = 0.2
     s: float = 30.0
@@ -29,5 +35,6 @@ class ExpConfig:
 @dataclass
 class ModelConfig:
     ecapa2: Ecapa2Config = field(default_factory=lambda: Ecapa2Config())
+    ecapa_tdnn: EcapaTDNNConfig = field(default_factory=lambda: EcapaTDNNConfig())
     mmas: AAMSoftmaxConfig = field(default_factory=lambda: AAMSoftmaxConfig())
     exp: ExpConfig = field(default_factory=lambda: ExpConfig())
