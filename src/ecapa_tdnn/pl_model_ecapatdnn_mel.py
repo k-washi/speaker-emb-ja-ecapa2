@@ -225,14 +225,7 @@ class EcapaTDNNModelModule(LightningModule):
             warmup_lr_init=self.config.ml.optimizer.warm_up_init,
             warmup_prefix=self.config.ml.optimizer.warmup_prefix,
         )
-        return {
-            "optimizer": self.optimizer,
-            "lr_scheduler": {
-                "scheduler": self.scheduler,
-                "interval": "epoch",
-                "frequency": 1,
-            },
-        }
+        return [self.optimizer], [self.scheduler]
     
     def lr_scheduler_step(self, scheduler, metric: Any | None) -> None:
         return scheduler.step(self.current_epoch)

@@ -78,7 +78,7 @@ class Ecapa2Dataset(Dataset):
                     print(f"Error fp: {self.audio_fp_list[idx]}")
                     idx = torch.randint(0, len(self), (1,)).item()
                     continue
-            if not self.is_mixup:
+            if not self.is_mixup or self.cfg.augment.mixup.prob == 0:
                 if spec1.dim() == 3:
                     spec1 = spec1.squeeze(0)
                 # spec1 = (spec1 / torch.linalg.norm(spec1, ord=2)).unsqueeze(0)
@@ -93,7 +93,9 @@ class Ecapa2Dataset(Dataset):
                     )
                 if self.aug is not None:
                     spec1 = self.aug.pt_spec_process(spec1)
-                spec1 = spec_max_random_normalization(spec1).unsqueeze(0)
+                #spec1 = spec_max_random_normalization(spec1).unsqueeze(0)
+                if spec1.dim() == 2:
+                    spec1 = spec1.unsqueeze(0)
                 return spec1, label_id1, label_id1, torch.tensor(1.0), (audio1, audio1)
                 
             # Mixup
@@ -130,7 +132,7 @@ class Ecapa2Dataset(Dataset):
                 )
             if self.aug is not None:
                 mixed_spec = self.aug.pt_spec_process(mixed_spec)
-            mixed_spec = spec_max_random_normalization(mixed_spec)
+            #mixed_spec = spec_max_random_normalization(mixed_spec)
             assert mixed_spec.isnan().sum() == 0, f"mixed_spec contains NaN: {mixed_spec}"
             return mixed_spec, label_id1, label_id2, mixup_lambda, (audio1, audio2)
     
@@ -167,7 +169,11 @@ class Ecapa2Dataset(Dataset):
         # 音声ファイルが長過ぎる場合は短くする
         max_length = self.cfg.audio.max_length
         if self.cfg.augment.maxlen.prob > torch.rand((1)).item():
-            max_length = int(random.randint(self.cfg.augment.maxlen.min_sec, self.cfg.augment.maxlen.max_sec) * self.cfg.audio.sample_rate)
+            max_length = int(
+                random.randint(
+                    int(self.cfg.augment.maxlen.min_sec * self.cfg.audio.sample_rate),
+                    int(self.cfg.augment.maxlen.max_sec * self.cfg.audio.sample_rate)
+                ))
         audio_length = audio.shape[0]
         if audio_length > max_length:
             start = random.randint(0, audio_length - max_length)

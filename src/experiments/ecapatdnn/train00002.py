@@ -26,12 +26,12 @@ seed_everything(cfg.ml.seed)
 ##########
 
 
-VERSION = "00042"
+VERSION = "00052"
 EXP_ID = "ecapatdnn_mel"
 WANDB_PROJECT_NAME = "speaker_verfication_ecapa2"
 IS_LOGGING = True
 FAST_DEV_RUN = False
-PRETRAIN_MODEL = "logs/ecapatdnn_mel_ft03_00031/ckpt/ckpt-23/ecapa2.ckpt"
+PRETRAIN_MODEL = "logs/ecapatdnn_mel_00051/ckpt/ckpt-6/ecapa2.ckpt"
 
 LOG_SAVE_DIR = f"logs/{EXP_ID}_{VERSION}"
 model_save_dir = f"{LOG_SAVE_DIR}/ckpt"
@@ -60,14 +60,14 @@ cfg.ml.early_stopping.monitor = "val_eer"
 cfg.ml.mix_precision = "bf16" # 16 or 32, bf16
 
 cfg.ml.optimizer.optimizer = "adamw"
-cfg.ml.optimizer.lr = 8e-4 # ft: 1e-5
+cfg.ml.optimizer.lr = 1e-3 # ft: 1e-5
 cfg.ml.optimizer.eps = 1e-6
-cfg.ml.optimizer.weight_decay = 0.01
+cfg.ml.optimizer.weight_decay = 2e-4
 cfg.ml.optimizer.fused = True
-cfg.ml.optimizer.lr_min = 1e-6
+cfg.ml.optimizer.lr_min = 1e-8
 cfg.ml.optimizer.t_initial = 100
-cfg.ml.optimizer.decay_rate = 0.5
-cfg.ml.optimizer.warm_up_init = 1e-6 # pretrained modelの場合は0
+cfg.ml.optimizer.decay_rate = 1
+cfg.ml.optimizer.warm_up_init = 1e-8 # pretrained modelの場合は0
 cfg.ml.optimizer.warm_up_t = 10 # pretrained modelの場合は0
 cfg.ml.optimizer.warmup_prefix = False # pretrained modelの場合はFalse
 
@@ -95,21 +95,21 @@ cfg.dataset.audio.n_fft = 512
 
 # augment
 cfg.dataset.augment.maxlen.prob = 0 # ft: 0.4
-cfg.dataset.augment.time_stretch.prob = 0 # ft: 0.2
-cfg.dataset.augment.noise.prob = 0.5 # ft: 0
+cfg.dataset.augment.time_stretch.prob = 0.6 # ft: 0.2
+cfg.dataset.augment.noise.prob = 0.8 # ft: 0
 cfg.dataset.augment.noise.min_snr = 10
 cfg.dataset.augment.noise.max_noise_num = 1
-cfg.dataset.augment.rir.prob = 0.5 # ft: 0
-cfg.dataset.augment.tfmask.prob = 0 # ft: 0
+cfg.dataset.augment.rir.prob = 0.8 # ft: 0
+cfg.dataset.augment.tfmask.prob = 0.8 # ft: 0
 cfg.dataset.augment.tfmask.freq_mask_max = 10
 cfg.dataset.augment.tfmask.time_mask_max = 5
-cfg.dataset.augment.codec.prob = 0.2 # ft: 0.2
-cfg.dataset.augment.volume.volume_aug_rate = 0.2
+cfg.dataset.augment.codec.prob = 0.5 # ft: 0.2
+cfg.dataset.augment.volume.volume_aug_rate = 0.8
 
 
-cfg.dataset.augment.mixup.prob = 0
-#cfg.dataset.augment.mixup.beta = 0.05
-#cfg.dataset.augment.mixup.alpha = 0.05
+cfg.dataset.augment.mixup.prob = 1
+cfg.dataset.augment.mixup.beta = 0.05
+cfg.dataset.augment.mixup.alpha = 0.05
 
 def train():
     logger.info(f"Config: {cfg}")

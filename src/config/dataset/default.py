@@ -48,6 +48,7 @@ class AugCodecConfig:
 
 @dataclass
 class AugMixupConfig:
+    prob: float = 1.0
     alpha: float = 0.2
     beta: float = 0.2
     spec_normalize: bool = True

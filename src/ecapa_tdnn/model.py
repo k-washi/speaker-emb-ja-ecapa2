@@ -116,7 +116,6 @@ class ECAPA_TDNN(nn.Module):
         self.bn5 = nn.BatchNorm1d(3072)
         self.fc6 = nn.Linear(3072, hidden_size)
         self.bn6 = nn.BatchNorm1d(hidden_size)
-        self.fc7 = nn.Linear(hidden_size, hidden_size)
 
 
     def forward(self, x) -> torch.Tensor:
@@ -151,7 +150,6 @@ class ECAPA_TDNN(nn.Module):
         x = self.bn5(x)
         x = self.fc6(x)
         x = self.bn6(x)
-        x = self.fc7(x)
         return x
 
 if __name__ == "__main__":
