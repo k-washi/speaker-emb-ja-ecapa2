@@ -173,6 +173,75 @@ class EcapaTDNNModelModule(LightningModule):
         del self.embedding_fp_dict
         gc.collect()
     
+    def on_test_epoch_start(self):
+        self.on_validation_epoch_start()
+    def test_step(self, batch, batch_idx):
+        self.validation_step(batch, batch_idx)
+    def on_test_epoch_end(self):
+        super().on_test_epoch_end()
+        score_list, label_list = [], []
+        # 同じ話者のspeaker embeddingをまとめる
+        embedding_error_num = 0
+        score_error_num = 0
+        all_data_num = 0
+        speaker_id_list = sorted(list(self.embedding_fp_dict.keys()))
+        for label_idx in tqdm(speaker_id_list, desc="Calc same speaker score", total=len(speaker_id_list)):
+            embedding_fp_list = self.embedding_fp_dict[label_idx]
+            for i, (fp1, fp2) in enumerate(zip(embedding_fp_list[0::2], embedding_fp_list[1::2])):
+                emb1 = torch.load(fp1)
+                emb2 = torch.load(fp2)
+                emb1, emb2 = emb1.unsqueeze(0), emb2.unsqueeze(0)
+                all_data_num += 1
+                if not (emb1.abs().max() >= 0 and emb2.abs().max() >= 0):
+                    embedding_error_num += 1
+                score = torch.mean(torch.matmul(emb1, emb2.mT))
+                if not score.abs().max() >= 0:
+                    score_error_num += 1
+                    score = torch.tensor([1.0])
+                score_list.append(score.item())
+                label_list.append(1)
+        if embedding_error_num > 0:
+            print(f"Embedding error: {embedding_error_num}/{all_data_num}")
+        if score_error_num > 0:
+            print(f"Score error: {score_error_num}/{all_data_num}")
+        # 異なる話者のspeaker embeddingを比較
+        for speaker_id1, speaker_id2 in tqdm(zip(speaker_id_list[0::2], speaker_id_list[1::2]),
+                                             desc="Calc diff speaker score",
+                                             total=len(speaker_id_list)//2
+                                            ):
+            spkemb_list1 = self.embedding_fp_dict[speaker_id1]
+            spkemb_list2 = self.embedding_fp_dict[speaker_id2]
+            for i, (fp1, fp2) in enumerate(zip(spkemb_list1, spkemb_list2)):
+                emb1 = torch.load(fp1)
+                emb2 = torch.load(fp2)
+                emb1, emb2 = emb1.unsqueeze(0), emb2.unsqueeze(0)
+                score = torch.mean(torch.matmul(emb1, emb2.T))
+                if not score.abs().max() >= 0:
+                    score = torch.tensor([1.0])
+                
+                score_list.append(score.item())
+                label_list.append(0)
+        score_list = np.array(score_list)
+        label_list = np.array(label_list)
+        try:
+            eer = tuneThresholdfromScore(score_list, label_list, [1, 0.1])[1]
+        except Exception as e:
+            logger.error(f"Error in tuneThresholdfromScore: {e}")
+            eer = 1.0
+        try:
+            fnrs, fprs, thresholds = ComputeErrorRates(score_list, label_list)
+            minDCF, _  = ComputeMinDcf(fnrs, fprs, thresholds, 0.05, 1, 1)
+        except Exception as e:
+            logger.error(f"Error in ComputeErrorRates: {e}")
+            minDCF = 1.0
+        
+        self.log('test/eer', eer, on_step=False, on_epoch=True, logger=True)
+        self.log('test/minDCF', minDCF, on_step=False,on_epoch=True, logger=True)
+
+        del score_list, label_list
+        del self.embedding_fp_dict
+        gc.collect()
+    
     def configure_optimizers(self):
         no_decay = ["bias", "LayerNorm.weight"]
 

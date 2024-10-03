@@ -62,7 +62,7 @@ class Ecapa2DatasetModule(LightningDataModule):
         )
         return DataLoader(
             valid_dataset,
-            batch_size=self.cfg.ml.batch_size,
+            batch_size=1,
             shuffle=False,
             num_workers=self.cfg.ml.num_workers,
             pin_memory=True,
@@ -83,7 +83,7 @@ class Ecapa2DatasetModule(LightningDataModule):
         )
         return DataLoader(
             test_dataset,
-            batch_size=self.cfg.ml.batch_size,
+            batch_size=1,
             shuffle=False,
             num_workers=self.cfg.ml.num_workers,
             pin_memory=True,
