@@ -19,6 +19,12 @@ class CheckpointEveryEpoch(pl.Callback):
             if hasattr(trainer, "model"):
                 if hasattr(trainer.model, "module"):
                     torch.save(trainer.model.module.model.state_dict(), net_g_save_path)
+                    
+                    if hasattr(trainer.model.module, "input_normalization"):
+                        torch.save(trainer.model.module.input_normalization.get_stete_dict(), save_dir / "normalize.ckpt")
                 else:
                     torch.save(trainer.model.model.state_dict(), net_g_save_path)
+                    if hasattr(trainer.model, "input_normalization"):
+                        torch.save(trainer.model.input_normalization.get_state_dict(), save_dir / "normalize.ckpt")
                 return None
+            

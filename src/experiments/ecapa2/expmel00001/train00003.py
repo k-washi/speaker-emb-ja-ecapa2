@@ -27,7 +27,7 @@ seed_everything(cfg.ml.seed)
 
 
 
-VERSION = "00062"
+VERSION = "00072"
 EXP_ID = "ecapa2_mel"
 WANDB_PROJECT_NAME = "speaker_verfication_ecapa2"
 IS_LOGGING = True
@@ -49,10 +49,10 @@ valid_audiofp_list, valid_label_list = get_audiofp_and_label_list_from_userlist_
 ############
 
 cfg.ml.seed = 5123
-cfg.ml.num_epochs = 50
-cfg.ml.batch_size = 40
+cfg.ml.num_epochs = 100
+cfg.ml.batch_size = 35
 cfg.ml.num_workers = 8
-cfg.ml.accumulate_grad_batches = 13 # batch_size * accumulate_grad_batches = 506 ~ 512
+cfg.ml.accumulate_grad_batches = 15 # batch_size * accumulate_grad_batches = 506 ~ 512
 cfg.ml.grad_clip_val = 10000
 cfg.ml.check_val_every_n_epoch = 1
 cfg.ml.early_stopping.patience = 500
@@ -69,7 +69,7 @@ cfg.ml.optimizer.lr_min = 1e-8
 cfg.ml.optimizer.t_initial = 50
 cfg.ml.optimizer.decay_rate = 1
 cfg.ml.optimizer.warm_up_init = 1e-8 # pretrained modelの場合は0
-cfg.ml.optimizer.warm_up_t = 0 # pretrained modelの場合は0
+cfg.ml.optimizer.warm_up_t = 10 # pretrained modelの場合は0
 cfg.ml.optimizer.warmup_prefix = False # pretrained modelの場合はFalse
 
 # model
@@ -80,7 +80,7 @@ cfg.model.ecapa2.gfe_hidden_channels = 1024
 cfg.model.ecapa2.gfe_out_channels = 1536
 cfg.model.ecapa2.local_feature_repeat_list = [2, 2, 2]
 cfg.model.ecapa2.activation = "gelu"
-cfg.model.ecapa2.speaker_emb_dim = 192
+cfg.model.ecapa2.speaker_emb_dim = 512
 
 # loss
 cfg.model.mmas.s = -1

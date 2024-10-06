@@ -120,7 +120,7 @@ class MixupAAMsoftmax(nn.Module):
         m = self.m
         if self.elastic:
             m = self.elastic_margin(cosine, m)
-        phi1 = self.create_phi(cosine, sine, 1, m)
+        phi1 = self.create_phi(cosine, sine, torch.Tensor([1.]).to(cosine.device), m)
         one_hot1 = torch.zeros_like(cosine)
         one_hot1.scatter_(1, label1.view(-1, 1), 1)
         output = one_hot1 * phi1 + (1 - one_hot1) * cosine

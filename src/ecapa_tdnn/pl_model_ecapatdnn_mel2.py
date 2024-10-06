@@ -11,11 +11,12 @@ from tqdm import tqdm
 from pytorch_lightning import LightningModule
 from timm.scheduler import CosineLRScheduler
 import math
+from speechbrain.utils.metric_stats import EER, minDCF
 
-from src.ecapa_tdnn.model import ECAPA_TDNN
+from src.ecapa_tdnn.ecapatdnn import ECAPA_TDNN, InputNormalization
 from src.config.config import Config
 from src.criteria.mixup_aamsoftmax import MixupAAMsoftmax
-from src.metrics.metrics import accuracy, ComputeErrorRates, ComputeMinDcf
+
 from src.metrics.utils import tuneThresholdfromScore
 from src.experiments.utils.plot_emb import umap_show
 
@@ -34,9 +35,8 @@ class EcapaTDNNModelModule(LightningModule):
         self.config = config
         mc = config.model
         self.model = ECAPA_TDNN(
-            frequency_bins_num=mc.ecapa_tdnn.frequency_bins_num,
-            channel_size=mc.ecapa_tdnn.channel_size,
-            hidden_size=mc.ecapa_tdnn.hidden_size,
+            mc.ecapa_tdnn.frequency_bins_num,
+            lin_neurons=mc.ecapa_tdnn.hidden_size,
         )
         
         self.aam_loss = MixupAAMsoftmax(
@@ -52,15 +52,22 @@ class EcapaTDNNModelModule(LightningModule):
             focal_loss_gamma=mc.mmas.focal_loss_gamma
         )
         
+        self.input_normalization = InputNormalization()
+        
         self._val_spkemb_output_dir = Path(mc.exp.val_spkemb_output_dir)
         self._current_step = 0
     def training_step(self, batch, batch_idx):
         self.model.train()
-        x, label1, label2, mixup_lambda = batch
+        x, lengths, label1 = batch
         if x.dim() == 4:
             x = x.squeeze(1)
-        output = self.model(x)
-        loss, _ = self.aam_loss(output, label1, label2, mixup_lambda)
+        x = self.input_normalization(x, lengths=lengths, epoch=self.current_epoch)
+        
+        output = self.model(x, lengths=lengths) # (B, time, mel) -> (B, hidden_size)
+        if output.dim() == 3:
+            output = output.squeeze(1)
+
+        loss, _ = self.aam_loss(output, label1, None, None)
         self.log('train/loss', loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
     
@@ -77,14 +84,17 @@ class EcapaTDNNModelModule(LightningModule):
             None
         """
         self.model.eval()
-        x, label, _, _ = batch
+        x, lengths, label1 = batch
         if x.dim() == 4:
             x = x.squeeze(1)
         with torch.no_grad():
+            x = self.input_normalization(x)
             spk_emb = self.model(x)
-        spk_emb = F.normalize(spk_emb).detach().cpu()
+            if spk_emb.dim() == 3:
+                spk_emb = spk_emb.squeeze(1)
+        spk_emb = F.normalize(spk_emb, p=2, dim=1).detach().cpu()
         for i in range(len(x)):
-            label_idx = int(label[i].item())
+            label_idx = int(label1[i].item())
             if label_idx not in self.label_set:
                 self.label_set.add(label_idx)
                 self.embedding_fp_dict[label_idx] = []
@@ -107,6 +117,8 @@ class EcapaTDNNModelModule(LightningModule):
             pass
         self._val_spkemb_output_dir.mkdir(parents=True, exist_ok=True)
         self._spkemb_index = 0
+        self.log("val/input_mean", self.input_normalization.glob_mean.mean(), on_step=False, on_epoch=True, logger=True)
+        self.log("val/input_std", self.input_normalization.glob_std.mean(), on_step=False, on_epoch=True, logger=True)
     
     def on_validation_epoch_end(self):
         super().on_validation_epoch_end()
@@ -123,7 +135,10 @@ class EcapaTDNNModelModule(LightningModule):
             for i, (fp1, fp2) in enumerate(zip(embedding_fp_list[0::2], embedding_fp_list[1::2])):
                 emb1 = torch.load(fp1)
                 emb2 = torch.load(fp2)
-                emb1, emb2 = emb1.unsqueeze(0), emb2.unsqueeze(0)
+                if emb1.dim() == 1:
+                    emb1 = emb1.unsqueeze(0)
+                if emb2.dim() == 1:
+                    emb2 = emb2.unsqueeze(0)
                 all_data_num += 1
                 if not (emb1.abs().max() >= 0 and emb2.abs().max() >= 0):
                     embedding_error_num += 1
@@ -152,7 +167,10 @@ class EcapaTDNNModelModule(LightningModule):
             for i, (fp1, fp2) in enumerate(zip(spkemb_list1, spkemb_list2)):
                 emb1 = torch.load(fp1)
                 emb2 = torch.load(fp2)
-                emb1, emb2 = emb1.unsqueeze(0), emb2.unsqueeze(0)
+                if emb1.dim() == 1:
+                    emb1 = emb1.unsqueeze(0)
+                if emb2.dim() == 1:
+                    emb2 = emb2.unsqueeze(0)
                 score = torch.mean(cos_sim(emb1, emb2))
                 if not score.abs().max() >= 0:
                     score = torch.tensor([1.0])
@@ -160,27 +178,19 @@ class EcapaTDNNModelModule(LightningModule):
                 diff_score_list.append(score.item())
                 diff_label_list.append(0)
         self.log('val/diff_score_mean', np.mean(diff_score_list), on_step=False, on_epoch=True, logger=True)
-        score_list.extend(diff_score_list)
-        label_list.extend(diff_label_list)
-        score_list = np.array(score_list)
-        label_list = np.array(label_list)
-        try:
-            eer = tuneThresholdfromScore(score_list, label_list, [1, 0.1])[1]
-        except Exception as e:
-            logger.error(f"Error in tuneThresholdfromScore: {e}")
-            eer = 1.0
-        try:
-            fnrs, fprs, thresholds = ComputeErrorRates(score_list, label_list)
-            minDCF, _  = ComputeMinDcf(fnrs, fprs, thresholds, 0.05, 1, 1)
-        except Exception as e:
-            logger.error(f"Error in ComputeErrorRates: {e}")
-            minDCF = 1.0
+        eer, _ = EER(torch.FloatTensor(score_list), torch.FloatTensor(diff_score_list))
+        if np.isnan(eer):
+            eer = 1.
+        eer *= 100
+        min_dcf, _ = minDCF(torch.FloatTensor(score_list), torch.FloatTensor(diff_score_list))
+        if np.isnan(min_dcf):
+            min_dcf = 1.
         
         self.log('val/eer', eer, on_step=False, on_epoch=True, logger=True)
-        self.log('val/minDCF', minDCF, on_step=False,on_epoch=True, logger=True)
+        self.log('val/minDCF', min_dcf, on_step=False,on_epoch=True, logger=True)
         self.log('val_eer', eer, on_step=False, on_epoch=True, logger=True)
 
-        del score_list, label_list
+        del score_list, label_list, diff_score_list, diff_label_list
         del self.embedding_fp_dict
         gc.collect()
     
@@ -217,12 +227,16 @@ class EcapaTDNNModelModule(LightningModule):
             for i, (fp1, fp2) in enumerate(zip(embedding_fp_list[0::2], embedding_fp_list[1::2])):
                 emb1 = torch.load(fp1)
                 emb2 = torch.load(fp2)
-                emb1, emb2 = emb1.unsqueeze(0), emb2.unsqueeze(0)
+                if emb1.dim() == 1:
+                    emb1 = emb1.unsqueeze(0)
+                if emb2.dim() == 1:
+                    emb2 = emb2.unsqueeze(0)
+                
                 all_data_num += 1
                 if not (emb1.abs().max() >= 0 and emb2.abs().max() >= 0):
                     embedding_error_num += 1
-                score = torch.mean(torch.matmul(emb1, emb2.mT))
-                print(score)
+                score = torch.mean(cos_sim(emb1, emb2))
+                
                 if not score.abs().max() >= 0:
                     score_error_num += 1
                     score = torch.tensor([1.0])
@@ -244,34 +258,29 @@ class EcapaTDNNModelModule(LightningModule):
             for i, (fp1, fp2) in enumerate(zip(spkemb_list1, spkemb_list2)):
                 emb1 = torch.load(fp1)
                 emb2 = torch.load(fp2)
-                emb1, emb2 = emb1.unsqueeze(0), emb2.unsqueeze(0)
-                score = torch.mean(torch.matmul(emb1, emb2.T))
+                if emb1.dim() == 1:
+                    emb1 = emb1.unsqueeze(0)
+                if emb2.dim() == 1:
+                    emb2 = emb2.unsqueeze(0)
+                score = torch.mean(cos_sim(emb1, emb2))
                 if not score.abs().max() >= 0:
                     score = torch.tensor([1.0])
                 
                 diff_score_list.append(score.item())
                 diff_label_list.append(0)
         self.log('test/diff_score_mean', np.mean(diff_score_list), on_step=False, on_epoch=True, logger=True)
-        score_list.extend(diff_score_list)
-        label_list.extend(diff_label_list)
-        score_list = np.array(score_list)
-        label_list = np.array(label_list)
-        try:
-            eer = tuneThresholdfromScore(score_list, label_list, [1, 0.1])[1]
-        except Exception as e:
-            logger.error(f"Error in tuneThresholdfromScore: {e}")
-            eer = 1.0
-        try:
-            fnrs, fprs, thresholds = ComputeErrorRates(score_list, label_list)
-            minDCF, _  = ComputeMinDcf(fnrs, fprs, thresholds, 0.05, 1, 1)
-        except Exception as e:
-            logger.error(f"Error in ComputeErrorRates: {e}")
-            minDCF = 1.0
+        eer, _ = EER(torch.FloatTensor(score_list), torch.FloatTensor(diff_score_list))
+        if np.isnan(eer):
+            eer = 1.
+        eer *= 100
+        min_dcf, _ = minDCF(torch.FloatTensor(score_list), torch.FloatTensor(diff_score_list))
+        if np.isnan(min_dcf):
+            min_dcf = 1.
         
         self.log('test/eer', eer, on_step=False, on_epoch=True, logger=True)
-        self.log('test/minDCF', minDCF, on_step=False,on_epoch=True, logger=True)
+        self.log('test/minDCF', min_dcf, on_step=False,on_epoch=True, logger=True)
 
-        del score_list, label_list
+        del score_list, label_list, diff_score_list, diff_label_list
         del self.embedding_fp_dict
         gc.collect()
     

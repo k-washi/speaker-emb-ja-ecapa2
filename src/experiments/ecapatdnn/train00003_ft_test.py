@@ -27,11 +27,12 @@ seed_everything(cfg.ml.seed)
 
 
 VERSION = "00054"
-EXP_ID = "ecapatdnn_mel_ft02_test_ep36"
+EXP_ID = "ecapatdnn_mel_ft03_test_ep19"
 WANDB_PROJECT_NAME = "speaker_verfication_ecapa2"
-IS_LOGGING = True
+IS_LOGGING = False
 FAST_DEV_RUN = False
-PRETRAIN_MODEL = "logs/ecapatdnn_mel_ft02_00054/ckpt/ckpt-36/ecapa2.ckpt"
+PRETRAIN_MODEL = "logs/ecapatdnn_mel_ft03_00054/ckpt/ckpt-19/ecapa2.ckpt"
+SHOW_OUTPUT_DIR = PRETRAIN_MODEL.replace("/ckpt/","/show/").replace("/ecapa2.ckpt","")
 
 LOG_SAVE_DIR = f"logs/{EXP_ID}_{VERSION}"
 model_save_dir = f"{LOG_SAVE_DIR}/ckpt"
@@ -43,10 +44,11 @@ train_audiofp_list, train_label_list = get_audiofp_and_label_list_from_userlist_
 # train_audiofp_list, train_label_list = train_audiofp_list[:2000],train_label_list[:2000] 
 num_classes = len(set(train_label_list))
 valid_audiofp_list, valid_label_list = get_audiofp_and_label_list_from_userlist_file(test_userlist_fp)
-# valid_audiofp_list, valid_label_list = valid_audiofp_list[:1000],valid_label_list[:1000]
+valid_audiofp_list, valid_label_list = valid_audiofp_list[:1000],valid_label_list[:1000]
 
 ############
 ############
+cfg.ml.show_output_dir = SHOW_OUTPUT_DIR
 cfg.ml.seed = 2345
 cfg.ml.num_epochs = 100
 cfg.ml.batch_size = 128

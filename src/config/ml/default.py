@@ -50,6 +50,7 @@ class MLConfig:
     mix_precision: str = 32 # 16 or 32, bf16
     gpu_devices: int = 1
     profiler: str = "simple"
+    show_output_dir: str = "./output"
     checkpoint: SaveConfig = field(default_factory=lambda: SaveConfig())
     early_stopping: EearlyStoppingConfig = field(default_factory=lambda: EearlyStoppingConfig())
     optimizer: Optimizer = field(default_factory=lambda: Optimizer())

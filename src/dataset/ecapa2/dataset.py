@@ -96,6 +96,7 @@ class Ecapa2Dataset(Dataset):
                 #spec1 = spec_max_random_normalization(spec1).unsqueeze(0)
                 if spec1.dim() == 2:
                     spec1 = spec1.unsqueeze(0)
+                #spec1 = spec1 - torch.mean(spec1, dim=-1, keepdim=True)
                 return spec1, label_id1, label_id1, torch.tensor(1.0), (audio1, audio1)
                 
             # Mixup
@@ -132,6 +133,7 @@ class Ecapa2Dataset(Dataset):
                 )
             if self.aug is not None:
                 mixed_spec = self.aug.pt_spec_process(mixed_spec)
+            #mixed_spec = mixed_spec - torch.mean(mixed_spec, dim=-1, keepdim=True)
             #mixed_spec = spec_max_random_normalization(mixed_spec)
             assert mixed_spec.isnan().sum() == 0, f"mixed_spec contains NaN: {mixed_spec}"
             return mixed_spec, label_id1, label_id2, mixup_lambda, (audio1, audio2)
