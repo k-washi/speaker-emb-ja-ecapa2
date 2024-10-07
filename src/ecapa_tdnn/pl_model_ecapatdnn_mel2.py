@@ -37,6 +37,7 @@ class EcapaTDNNModelModule(LightningModule):
         self.model = ECAPA_TDNN(
             mc.ecapa_tdnn.frequency_bins_num,
             lin_neurons=mc.ecapa_tdnn.hidden_size,
+            channels=[1024, 1024, 1024, 1024, 3072]
         )
         
         self.aam_loss = MixupAAMsoftmax(

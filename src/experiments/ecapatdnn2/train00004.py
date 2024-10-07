@@ -26,7 +26,7 @@ seed_everything(cfg.ml.seed)
 ##########
 
 
-VERSION = "00081"
+VERSION = "00082"
 EXP_ID = "ecapatdnn_mel"
 WANDB_PROJECT_NAME = "speaker_verfication_ecapa2"
 IS_LOGGING = True
@@ -48,9 +48,9 @@ valid_audiofp_list, valid_label_list = get_audiofp_and_label_list_from_userlist_
 ############
 cfg.ml.seed = 5123
 cfg.ml.num_epochs = 100
-cfg.ml.batch_size = 256
+cfg.ml.batch_size = 192
 cfg.ml.num_workers = 10
-cfg.ml.accumulate_grad_batches = 2 # batch_size * accumulate_grad_batches = 506 ~ 512
+cfg.ml.accumulate_grad_batches = 3 # batch_size * accumulate_grad_batches = 506 ~ 512
 cfg.ml.grad_clip_val = 10000
 cfg.ml.check_val_every_n_epoch = 1
 cfg.ml.early_stopping.patience = 500
