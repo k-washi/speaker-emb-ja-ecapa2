@@ -145,3 +145,4 @@ nohup/
 wandb/
 lightning_logs/
 logs/
+pretrained_models/
