@@ -158,14 +158,15 @@ class EcapaTDNNModelModule(LightningModule):
             print(f"Score error: {score_error_num}/{all_data_num}")
         # 異なる話者のspeaker embeddingを比較
         
+        score_length = len(score_list)
         diff_score_list, diff_label_list = [], []
-        for speaker_id1, speaker_id2 in tqdm(zip(speaker_id_list[0::2], speaker_id_list[1::2]),
-                                             desc="Calc diff speaker score",
-                                             total=len(speaker_id_list)//2
-                                            ):
-            spkemb_list1 = self.embedding_fp_dict[speaker_id1]
-            spkemb_list2 = self.embedding_fp_dict[speaker_id2]
-            for i, (fp1, fp2) in enumerate(zip(spkemb_list1, spkemb_list2)):
+        add_index = 0
+        while len(diff_score_list) < score_length:
+            for speaker_id1, speaker_id2 in itertools.combinations(speaker_id_list):
+                if len(self.embedding_fp_dict[speaker_id1]) <= add_index and len(self.embedding_fp_dict[speaker_id2]) <= add_index:
+                    continue
+                fp1 = self.embedding_fp_dict[speaker_id1][add_index]
+                fp2 = self.embedding_fp_dict[speaker_id2][add_index]
                 emb1 = torch.load(fp1)
                 emb2 = torch.load(fp2)
                 if emb1.dim() == 1:
@@ -178,6 +179,11 @@ class EcapaTDNNModelModule(LightningModule):
                 
                 diff_score_list.append(score.item())
                 diff_label_list.append(0)
+                if len(diff_score_list) >= score_length:
+                    break
+                
+            add_index += 1
+        
         self.log('val/diff_score_mean', np.mean(diff_score_list), on_step=False, on_epoch=True, logger=True)
         eer, _ = EER(torch.FloatTensor(score_list), torch.FloatTensor(diff_score_list))
         if np.isnan(eer):
