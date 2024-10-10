@@ -161,9 +161,11 @@ class EcapaTDNNModelModule(LightningModule):
         score_length = len(score_list)
         diff_score_list, diff_label_list = [], []
         add_index = 0
+        print(f"score length: {score_length}")
         while len(diff_score_list) < score_length:
-            for speaker_id1, speaker_id2 in itertools.combinations(speaker_id_list):
-                if len(self.embedding_fp_dict[speaker_id1]) <= add_index and len(self.embedding_fp_dict[speaker_id2]) <= add_index:
+            is_added = False
+            for speaker_id1, speaker_id2 in itertools.combinations(speaker_id_list, r=2):
+                if len(self.embedding_fp_dict[speaker_id1]) <= add_index or len(self.embedding_fp_dict[speaker_id2]) <= add_index:
                     continue
                 fp1 = self.embedding_fp_dict[speaker_id1][add_index]
                 fp2 = self.embedding_fp_dict[speaker_id2][add_index]
@@ -179,11 +181,15 @@ class EcapaTDNNModelModule(LightningModule):
                 
                 diff_score_list.append(score.item())
                 diff_label_list.append(0)
+                
+                is_added = True
                 if len(diff_score_list) >= score_length:
                     break
                 
             add_index += 1
-        
+            if not is_added:
+                break
+        print(f"diff score length: {len(diff_score_list)}")
         self.log('val/diff_score_mean', np.mean(diff_score_list), on_step=False, on_epoch=True, logger=True)
         eer, _ = EER(torch.FloatTensor(score_list), torch.FloatTensor(diff_score_list))
         if np.isnan(eer):
