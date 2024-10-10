@@ -25,8 +25,9 @@ seed_everything(cfg.ml.seed)
 # PARAMS #
 ##########
 
+# データの拡張を減らして学習を行う
 
-VERSION = "00082"
+VERSION = "00085"
 EXP_ID = "ecapatdnn_mel"
 WANDB_PROJECT_NAME = "speaker_verfication_ecapa2"
 IS_LOGGING = True
@@ -48,9 +49,9 @@ valid_audiofp_list, valid_label_list = get_audiofp_and_label_list_from_userlist_
 ############
 cfg.ml.seed = 5123
 cfg.ml.num_epochs = 100
-cfg.ml.batch_size = 192
-cfg.ml.num_workers = 10
-cfg.ml.accumulate_grad_batches = 3 # batch_size * accumulate_grad_batches = 506 ~ 512
+cfg.ml.batch_size = 76
+cfg.ml.num_workers = 8
+cfg.ml.accumulate_grad_batches = 2 # batch_size * accumulate_grad_batches = 506 ~ 512
 cfg.ml.grad_clip_val = 10000
 cfg.ml.check_val_every_n_epoch = 1
 cfg.ml.early_stopping.patience = 500
@@ -59,7 +60,7 @@ cfg.ml.early_stopping.monitor = "val_eer"
 cfg.ml.mix_precision = "bf16" # 16 or 32, bf16
 
 cfg.ml.optimizer.optimizer = "adamw"
-cfg.ml.optimizer.lr = 5e-4 # ft: 1e-5
+cfg.ml.optimizer.lr = 1e-3 # ft: 1e-5
 cfg.ml.optimizer.eps = 1e-6
 cfg.ml.optimizer.weight_decay = 2e-4
 cfg.ml.optimizer.fused = True
@@ -71,13 +72,13 @@ cfg.ml.optimizer.warm_up_t = 5 # pretrained modelの場合は0
 cfg.ml.optimizer.warmup_prefix = False # pretrained modelの場合はFalse
 
 # model
-cfg.model.mmas.m = 0.2 # ft: 0.4
+cfg.model.mmas.m = 0.3 # ft: 0.4
 cfg.model.ecapa_tdnn.frequency_bins_num = 80
 cfg.model.ecapa_tdnn.channel_size = 1024
 cfg.model.ecapa_tdnn.hidden_size = 192
 
 # loss
-cfg.model.mmas.s = -1
+cfg.model.mmas.s = 30
 cfg.model.mmas.k = 1
 cfg.model.mmas.elastic = False
 cfg.model.mmas.elastic_plus = False
@@ -86,24 +87,24 @@ cfg.model.mmas.focal_loss_gamma = 2
 
 # dataset
 cfg.dataset.audio.sample_rate = 16000
-cfg.dataset.audio.max_length = int(2 * cfg.dataset.audio.sample_rate)
+cfg.dataset.audio.max_length = int(5 * cfg.dataset.audio.sample_rate)
 cfg.dataset.audio.num_classes = num_classes
 cfg.dataset.audio.n_mels = 80 # == cfg.model.ecapa2.frequency_bins_num
 cfg.dataset.audio.n_fft = 512
 
 
 # augment
-cfg.dataset.augment.maxlen.prob = 0 # ft: 0.4
-cfg.dataset.augment.time_stretch.prob = 0.6 # ft: 0.2
-cfg.dataset.augment.noise.prob = 0.8 # ft: 0
+cfg.dataset.augment.maxlen.prob = 0.6 # ft: 0.4
+cfg.dataset.augment.time_stretch.prob = 0.1 # ft: 0.2
+cfg.dataset.augment.noise.prob = 0.3 # ft: 0
 cfg.dataset.augment.noise.min_snr = 10
 cfg.dataset.augment.noise.max_noise_num = 1
-cfg.dataset.augment.rir.prob = 0.8 # ft: 0
-cfg.dataset.augment.tfmask.prob = 0.6 # ft: 0
+cfg.dataset.augment.rir.prob = 0.1 # ft: 0
+cfg.dataset.augment.tfmask.prob = 0.3 # ft: 0
 cfg.dataset.augment.tfmask.freq_mask_max = 10
 cfg.dataset.augment.tfmask.time_mask_max = 5
-cfg.dataset.augment.codec.prob = 0.5 # ft: 0.2
-cfg.dataset.augment.volume.volume_aug_rate = 0.8
+cfg.dataset.augment.codec.prob = 0.2 # ft: 0.2
+# cfg.dataset.augment.volume.volume_aug_rate = 0.8
 
 
 cfg.dataset.augment.mixup.prob = 0

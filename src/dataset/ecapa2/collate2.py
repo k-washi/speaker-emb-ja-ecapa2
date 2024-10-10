@@ -11,7 +11,6 @@ def collate_fn(batch):
     """
     spec_time_length_list = [x[0].size(-1) for x in batch]
     max_time_length = max(spec_time_length_list)
-    min_time_length = min(spec_time_length_list)
     
     # 出力作成用のサイズを決定
     batch_size = len(batch)
