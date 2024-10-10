@@ -28,6 +28,7 @@ class AAMSoftmaxConfig:
     elastic_plus: bool = False
     focal_loss: bool = False
     focal_loss_gamma: int = 2
+    label_smoothing: float = 0
 @dataclass
 class ExpConfig:
     val_spkemb_output_dir: str = "/data/val_spkemb"
