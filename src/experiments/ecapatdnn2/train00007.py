@@ -30,7 +30,7 @@ seed_everything(cfg.ml.seed)
 VERSION = "00087"
 EXP_ID = "ecapatdnn_mel"
 WANDB_PROJECT_NAME = "speaker_verfication_ecapa2"
-IS_LOGGING = False
+IS_LOGGING = True
 FAST_DEV_RUN = False
 
 LOG_SAVE_DIR = f"logs/{EXP_ID}_{VERSION}"
