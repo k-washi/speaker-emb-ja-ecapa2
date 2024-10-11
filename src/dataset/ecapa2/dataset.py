@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 import random
 from typing import Tuple
 
-from src.utils.audio import load_wave
+from src.utils.audio import load_wave, save_wave
 
 from src.dataset.augment.augment import AugmentManager
 from src.dataset.augment.mixup import (
@@ -170,13 +170,24 @@ class Ecapa2Dataset(Dataset):
         # 音声ファイルの切り出し
         # 音声ファイルが長過ぎる場合は短くする
         max_length = self.cfg.audio.max_length
-        if self.cfg.augment.maxlen.prob > torch.rand((1)).item():
-            max_length = int(
-                random.randint(
-                    int(self.cfg.augment.maxlen.min_sec * self.cfg.audio.sample_rate),
-                    int(self.cfg.augment.maxlen.max_sec * self.cfg.audio.sample_rate)
-                ))
         audio_length = audio.shape[0]
+        if self.cfg.augment.maxlen.prob > torch.rand((1)).item():
+            if audio_length > max_length:
+                max_length = int(
+                    random.randint(
+                        int(self.cfg.augment.maxlen.min_sec * self.cfg.audio.sample_rate),
+                        max_length
+                    ))
+            else:
+                if audio_length > int(self.cfg.augment.maxlen.max_sec * self.cfg.audio.sample_rate):
+                    max_length = int(
+                        random.randint(
+                            int(self.cfg.augment.maxlen.min_sec * self.cfg.audio.sample_rate),
+                            audio_length
+                        ))
+                else:
+                    max_length = audio_length
+        
         if audio_length > max_length:
             start = random.randint(0, audio_length - max_length)
             audio = audio[start:start+max_length]
