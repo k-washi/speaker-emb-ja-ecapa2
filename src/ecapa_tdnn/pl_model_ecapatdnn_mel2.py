@@ -19,6 +19,7 @@ from src.criteria.mixup_aamsoftmax import MixupAAMsoftmax
 
 from src.metrics.utils import tuneThresholdfromScore
 from src.experiments.utils.plot_emb import umap_show
+from src.experiments.utils.rankme import calc_rankme
 
 from src.utils.logger import get_logger
 logger = get_logger(debug=True)
@@ -129,6 +130,21 @@ class EcapaTDNNModelModule(LightningModule):
         score_error_num = 0
         all_data_num = 0
         speaker_id_list = sorted(list(self.embedding_fp_dict.keys()))
+        
+        embedding_list = []
+        for speaker_id in speaker_id_list:
+            embedding_fp_list = self.embedding_fp_dict[speaker_id]
+            for fp in embedding_fp_list[:20]:
+                emb = torch.load(fp)
+                if not emb.abs().max() >= 0:
+                    continue
+                embedding_list.append(emb)
+        rankme = 0
+        if len(embedding_list) > 0:
+            embedding_list = torch.stack(embedding_list)
+            rankme = calc_rankme(embedding_list)
+        self.log('val/rankme', rankme, on_step=False, on_epoch=True, logger=True)
+        del embedding_list
         
         cos_sim = torch.nn.CosineSimilarity()
         for label_idx in tqdm(speaker_id_list, desc="Calc same speaker score", total=len(speaker_id_list)):
