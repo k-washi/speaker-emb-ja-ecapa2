@@ -74,8 +74,8 @@ class Ecapa2Dataset(Dataset):
                     assert spec1.abs().sum() > 0, f"spec1 all 0: {spec1}"
                     break
                 except Exception as e:
-                    print(f"Error: {e}")
-                    print(f"Error fp: {self.audio_fp_list[idx]}")
+                    #print(f"Error: {e}")
+                    #print(f"Error fp: {self.audio_fp_list[idx]}")
                     idx = torch.randint(0, len(self), (1,)).item()
                     continue
             if not self.is_mixup or self.cfg.augment.mixup.prob == 0:
@@ -108,8 +108,8 @@ class Ecapa2Dataset(Dataset):
                     assert spec2.abs().sum() > 0, f"spec2 all 0: {spec2}"
                     break
                 except Exception as e:
-                    print(f"Error: {e}")
-                    print(f"Error fp: {self.audio_fp_list[random_index]}")
+                    #print(f"Error: {e}")
+                    #print(f"Error fp: {self.audio_fp_list[random_index]}")
                     continue
             if label_id1 == label_id2:
                 mixup_lambda = torch.tensor(1.0)
