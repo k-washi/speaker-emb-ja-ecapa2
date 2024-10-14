@@ -17,6 +17,7 @@ class EcapaTDNNConfig:
     frequency_bins_num: int = 80
     channel_size: int = 1024
     hidden_size: int = 192
+    dropout_rate: float = 0.0
 
 @dataclass
 class AAMSoftmaxConfig:
