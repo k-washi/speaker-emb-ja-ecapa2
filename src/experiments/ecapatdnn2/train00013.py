@@ -49,9 +49,9 @@ valid_audiofp_list, valid_label_list = get_audiofp_and_label_list_from_userlist_
 ############
 cfg.ml.seed = 5123
 cfg.ml.num_epochs = 24
-cfg.ml.batch_size = 170
+cfg.ml.batch_size = 128
 cfg.ml.num_workers = 8
-cfg.ml.accumulate_grad_batches = 3 # batch_size * accumulate_grad_batches = 506 ~ 512
+cfg.ml.accumulate_grad_batches = 4 # batch_size * accumulate_grad_batches = 506 ~ 512
 cfg.ml.grad_clip_val = 10000
 cfg.ml.check_val_every_n_epoch = 1
 cfg.ml.early_stopping.patience = 500

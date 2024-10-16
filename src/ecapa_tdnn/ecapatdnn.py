@@ -1142,7 +1142,7 @@ class ECAPA_TDNN(torch.nn.Module):
         """
         # Minimize transpose for efficiency
         x = x.transpose(1, 2)
-
+    
         xl = []
         for layer in self.blocks:
             try:
