@@ -1,6 +1,194 @@
+import math
+from typing import Mapping
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
+from typing import Any
+
+class InputNormalization(torch.nn.Module):
+    """Performs mean and variance normalization of the input tensor.
+
+    Arguments
+    ---------
+    mean_norm : True
+         If True, the mean will be normalized.
+    std_norm : True
+         If True, the standard deviation will be normalized.
+    norm_type : str
+         It defines how the statistics are computed ('sentence' computes them
+         at sentence level, 'batch' at batch level, 'speaker' at speaker
+         level, while global computes a single normalization vector for all
+         the sentences in the dataset). Speaker and global statistics are
+         computed with a moving average approach.
+    avg_factor : float
+         It can be used to manually set the weighting factor between
+         current statistics and accumulated ones.
+    requires_grad : bool
+        Whether this module should be updated using the gradient during training.
+    update_until_epoch : int
+        The epoch after which updates to the norm stats should stop.
+
+    Example
+    -------
+    >>> import torch
+    >>> norm = InputNormalization()
+    >>> inputs = torch.randn([10, 101, 20])
+    >>> inp_len = torch.ones([10])
+    >>> features = norm(inputs, inp_len)
+    """
+
+    from typing import Dict
+
+    def __init__(
+        self,
+        mean_norm=True,
+        std_norm=True,
+        norm_type="global",
+        avg_factor=None,
+        requires_grad=False,
+        update_until_epoch=3,
+    ):
+        super().__init__()
+        self.mean_norm = mean_norm
+        self.std_norm = std_norm
+        self.norm_type = norm_type
+        self.avg_factor = avg_factor
+        self.requires_grad = requires_grad
+        self.glob_mean = torch.tensor([0.], dtype=torch.float32)
+        self.glob_std = torch.tensor([0.], dtype=torch.float32)
+        self.weight = 1.0
+        self.count = 0
+        self.eps = 1e-10
+        self.update_until_epoch = update_until_epoch
+
+    def forward(self, x, lengths=None, epoch=0):
+        """Returns the tensor with the surrounding context.
+
+        Arguments
+        ---------
+        x : torch.Tensor
+            A batch of tensors.
+            (B, 1, Mel_bins, T)
+        lengths : torch.Tensor
+            The length of each sequence in the batch.
+        spk_ids : torch.Tensor containing the ids of each speaker (e.g, [0 10 6]).
+            It is used to perform per-speaker normalization when
+            norm_type='speaker'.
+        epoch : int
+            The epoch count.
+
+        Returns
+        -------
+        x : torch.Tensor
+            The normalized tensor.
+        """
+        N_batches = x.shape[0]
+
+        current_means = []
+        current_stds = []
+        
+        if lengths is None:
+            lengths = torch.ones(N_batches) * x.shape[-1]
+        lengths = lengths.long()
+
+        x = x.transpose(-1, -2)
+        for snt_id in range(N_batches):
+            # Avoiding padded time steps
+            actual_size = lengths[snt_id]
+
+            # computing statistics
+            current_mean, current_std = self._compute_current_stats(
+                x[snt_id, 0, :actual_size, :]
+            )
+            current_means.append(current_mean)
+            current_stds.append(current_std)
+
+
+            current_mean = torch.mean(torch.stack(current_means), dim=0)
+            current_std = torch.mean(torch.stack(current_stds), dim=0)
+
+        
+        if self.norm_type == "batch":
+            out = (x - current_mean.data) / (current_std.data)
+
+        if self.norm_type == "global":
+            if self.training:
+                if self.count == 0:
+                    self.glob_mean = current_mean
+                    self.glob_std = current_std
+
+                elif epoch is None or epoch < self.update_until_epoch:
+                    if self.avg_factor is None:
+                        self.weight = 1 / (self.count + 1)
+                    else:
+                        self.weight = self.avg_factor
+
+                    self.glob_mean = (1 - self.weight) * self.glob_mean.to(
+                        current_mean
+                    ) + self.weight * current_mean
+
+                    self.glob_std = (1 - self.weight) * self.glob_std.to(
+                        current_std
+                    ) + self.weight * current_std
+
+                self.glob_mean.detach()
+                self.glob_std.detach()
+
+                self.count = self.count + 1
+
+            out = (x - self.glob_mean.data.to(x)) / (
+                self.glob_std.data.to(x)
+            )
+        out = out.transpose(-1, -2)
+        return out
+
+    def _compute_current_stats(self, x):
+        """Computes mean and std
+
+        Arguments
+        ---------
+        x : torch.Tensor
+            A batch of tensors.
+
+        Returns
+        -------
+        current_mean : torch.Tensor
+            The average of x along dimension 0
+        current_std : torch.Tensor
+            The standard deviation of x along dimension 0
+        """
+        # Compute current mean
+        if self.mean_norm:
+            current_mean = torch.mean(x, dim=0).detach().data
+        else:
+            current_mean = torch.tensor([0.0], device=x.device)
+
+        # Compute current std
+        if self.std_norm:
+            current_std = torch.std(x, dim=0).detach().data
+        else:
+            current_std = torch.tensor([1.0], device=x.device)
+
+        # Improving numerical stability of std
+        current_std = torch.max(
+            current_std, self.eps * torch.ones_like(current_std)
+        )
+
+        return current_mean, current_std
+    
+    def get_state_dict(self):
+        """Returns the state of the module as a dictionary."""
+        return {
+            "glob_mean": self.glob_mean,
+            "glob_std": self.glob_std,
+            "count": self.count,
+        }
+    def set_state_dict(self, state_dict: Mapping[str, Any], strict: bool = True, assign: bool = False):
+        """Loads the module state."""
+        self.glob_mean = state_dict["glob_mean"]
+        self.glob_std = state_dict["glob_std"]
+        self.count = state_dict["count"]
+        return self
 
 def get_activation(activation: str):
     if activation == "relu":
@@ -573,7 +761,8 @@ class ECAPA2(nn.Module):
         gfe_hidden_channels: int = 1024,
         gfe_out_channels: int = 1536,
         state_pool_hidden_channels:int = 256,
-        local_feature_repeat_list: list[int] = [3, 4, 4, 4, 5]
+        local_feature_repeat_list: list[int] = [3, 4, 4, 4, 5],
+        dropout_rate: float = 0.0
     ):
         super().__init__()
         self.lfe = LocalFeatureExtractorModule(
@@ -599,7 +788,10 @@ class ECAPA2(nn.Module):
             activation=activation
         )
         
+        self.cd_bn = nn.BatchNorm1d(gfe_out_channels*2)
+        self.cd_do = nn.Dropout(p=dropout_rate)
         self.speaker_emb = nn.Linear(gfe_out_channels*2, speaker_emb_dim)
+        self.out_bn = nn.BatchNorm1d(speaker_emb_dim)
         
     def forward(self, x, lengths=None):
         
@@ -614,7 +806,10 @@ class ECAPA2(nn.Module):
         x = self.gfe(x, m=m3d) # (batch, 756, frame)
         mu, sg = self.cd_stats_pooling(x, m=m3d) # (batch, 756), (batch, 756)
         x = torch.cat((mu, sg), dim=1) # (batch, 756*2)
+        x = self.cd_bn(x)
+        x = self.cd_do(x)
         x = self.speaker_emb(x) # (batch, speaker_emb_dim)
+        x = self.out_bn(x)
         return x
 
 if __name__ == "__main__":
@@ -644,7 +839,7 @@ if __name__ == "__main__":
         gfe_hidden_channels=512,
         gfe_out_channels=756,
         state_pool_hidden_channels=256,
-        local_feature_repeat_list=[2, 2, 2]
+        local_feature_repeat_list=[2, 3, 3, 4]
     )
     model.eval()
     out = model(spec)

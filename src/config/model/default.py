@@ -11,6 +11,7 @@ class Ecapa2Config:
     gfe_out_channels: int = 1536
     state_pool_hidden_channels:int = 256
     local_feature_repeat_list: list[int] = field(default_factory=lambda: [3, 4, 4, 4, 5])
+    dropout_rate: float = 0.0
 
 @dataclass
 class EcapaTDNNConfig:
