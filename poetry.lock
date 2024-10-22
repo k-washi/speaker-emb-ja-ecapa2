@@ -779,6 +779,16 @@ files = [
 six = ">=1.4.0"
 
 [[package]]
+name = "dog-optimizer"
+version = "1.0.3"
+description = "implementation of the algorithms in the paper DoG is SGD's Best Friend: A Parameter-Free Dynamic Step Size Schedule"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "dog-optimizer-1.0.3.tar.gz", hash = "sha256:44a670e010084c26d7035dce1b4f9a0a087b52527906756192c1042102e05bd2"},
+]
+
+[[package]]
 name = "exceptiongroup"
 version = "1.2.2"
 description = "Backport of PEP 654 (exception groups)"
@@ -2492,6 +2502,17 @@ tests = ["coverage[toml]", "pytest", "pytest-asyncio"]
 tests-deser = ["odfpy", "openpyxl", "pyarrow", "tables", "xlrd"]
 tests-examples = ["aiohttp", "nbval", "pandas", "panel", "pytest", "pytest-asyncio", "pytest-xdist"]
 tests-full = ["aiohttp", "cloudpickle", "coverage[toml]", "gmpy", "ipython", "jsonschema", "nbval", "nest-asyncio", "numpy", "odfpy", "openpyxl", "pandas", "panel", "pyarrow", "pytest", "pytest-asyncio", "pytest-xdist", "tables", "xlrd"]
+
+[[package]]
+name = "parameterfree"
+version = "0.0.1"
+description = "Parameter-Free Optimizers for Pytorch"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "parameterfree-0.0.1-py3-none-any.whl", hash = "sha256:2664bee9f53c510eb6c71946e11a0ea3c91794f92acd7d9b53d78bd58659c29b"},
+    {file = "parameterfree-0.0.1.tar.gz", hash = "sha256:812f5aede824a97b0a65f8696986b14c11a4915e311ce8b2c23381d953ead79c"},
+]
 
 [[package]]
 name = "partd"
@@ -4682,4 +4703,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "34e69f236c39ec74f89826d086c79cf224571f3a6a13ca4424eec0bdbe4d24b8"
+content-hash = "2b2af841645eaa59b867ece49245efe8aad481e307a56b18cebbefafa0140c3f"
