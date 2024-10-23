@@ -27,7 +27,7 @@ seed_everything(cfg.ml.seed)
 
 
 
-VERSION = "00301"
+VERSION = "00303"
 EXP_ID = "ecapa2_mel_2334"
 WANDB_PROJECT_NAME = "speaker_verfication_ecapa2"
 IS_LOGGING = True
@@ -52,7 +52,7 @@ cfg.ml.seed = 5123
 cfg.ml.num_epochs = 24
 cfg.ml.batch_size = 24
 cfg.ml.num_workers = 8
-cfg.ml.accumulate_grad_batches = 20 # batch_size * accumulate_grad_batches = 506 ~ 512
+cfg.ml.accumulate_grad_batches = 22 # batch_size * accumulate_grad_batches = 506 ~ 512
 cfg.ml.grad_clip_val = 10000
 cfg.ml.check_val_every_n_epoch = 1
 cfg.ml.early_stopping.patience = 500
@@ -73,7 +73,7 @@ cfg.ml.optimizer.warm_up_t = 4 # pretrained modelの場合は0
 cfg.ml.optimizer.warmup_prefix = False # pretrained modelの場合はFalse
 
 # model
-cfg.model.mmas.m = 0.2 # ft: 0.4
+cfg.model.mmas.m = 0.4 # ft: 0.4
 cfg.model.ecapa2.frequency_bins_num = 80
 cfg.model.ecapa2.lfe_use_frequency_encoding = False # Falseでも性能良いかも
 cfg.model.ecapa2.gfe_hidden_channels = 1024
@@ -86,8 +86,9 @@ cfg.model.ecapa2.dropout_rate = 0.2
 # loss
 cfg.model.mmas.s = 30
 cfg.model.mmas.k = 3
-cfg.model.mmas.elastic = False
-cfg.model.mmas.elastic_plus = False
+cfg.model.mmas.elastic = True
+cfg.model.mmas.elastic_plus = True
+cfg.model.mmas.elastic_std = 0.0125 # 0.0125, 0.0175, 0.025, 0.05
 cfg.model.mmas.focal_loss = True
 cfg.model.mmas.focal_loss_gamma = 2
 # dataset
