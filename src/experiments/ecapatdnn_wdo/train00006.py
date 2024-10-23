@@ -49,9 +49,9 @@ valid_audiofp_list, valid_label_list = get_audiofp_and_label_list_from_userlist_
 ############
 cfg.ml.seed = 5123
 cfg.ml.num_epochs = 24
-cfg.ml.batch_size = 75
+cfg.ml.batch_size = 64
 cfg.ml.num_workers = 4
-cfg.ml.accumulate_grad_batches = 4 # batch_size * accumulate_grad_batches = 506 ~ 512
+cfg.ml.accumulate_grad_batches = 8 # batch_size * accumulate_grad_batches = 506 ~ 512
 cfg.ml.grad_clip_val = 10000
 cfg.ml.check_val_every_n_epoch = 1
 cfg.ml.early_stopping.patience = 500
@@ -60,16 +60,16 @@ cfg.ml.early_stopping.monitor = "val_eer"
 cfg.ml.mix_precision = "bf16" # 16 or 32, bf16
 
 cfg.ml.optimizer.optimizer = "cocob"
-cfg.ml.optimizer.lr = 1e-3 # ft: 1e-5
-cfg.ml.optimizer.eps = 1e-6
+#cfg.ml.optimizer.lr = 1e-3 # ft: 1e-5
+#cfg.ml.optimizer.eps = 1e-6
 cfg.ml.optimizer.weight_decay = 2e-5
-cfg.ml.optimizer.fused = True
-cfg.ml.optimizer.lr_min = 1e-6
-cfg.ml.optimizer.t_initial = 8
-cfg.ml.optimizer.decay_rate = 0.5
-cfg.ml.optimizer.warm_up_init = 1e-6 # pretrained modelの場合は0
-cfg.ml.optimizer.warm_up_t = 4 # pretrained modelの場合は0
-cfg.ml.optimizer.warmup_prefix = False # pretrained modelの場合はFalse
+#cfg.ml.optimizer.fused = True
+#cfg.ml.optimizer.lr_min = 1e-6
+#cfg.ml.optimizer.t_initial = 8
+#cfg.ml.optimizer.decay_rate = 0.5
+#cfg.ml.optimizer.warm_up_init = 1e-6 # pretrained modelの場合は0
+#cfg.ml.optimizer.warm_up_t = 4 # pretrained modelの場合は0
+#cfg.ml.optimizer.warmup_prefix = False # pretrained modelの場合はFalse
 
 # model
 cfg.model.mmas.m = 0.3 # ft: 0.4
