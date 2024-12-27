@@ -257,21 +257,42 @@ class Ecapa2ModelModule(LightningModule):
                     weight_decay=self.config.ml.optimizer.weight_decay,
                     fused=self.config.ml.optimizer.fused,
                 )
+        elif self.config.ml.optimizer.optimizer == "cocob":
+            from parameterfree import COCOB
+            self.optimizer = COCOB(
+                optimizer_grouped_parameters,
+                weight_decay=self.config.ml.optimizer.weight_decay,
+            )
+        elif self.config.ml.optimizer.optimizer == "kt":
+            from parameterfree import KT
+            self.optimizer = KT(
+                optimizer_grouped_parameters,
+                weight_decay=self.config.ml.optimizer.weight_decay,
+            )
+        elif self.config.ml.optimizer.optimizer == "dog":
+            from dog import DoG
+            self.optimizer = DoG(
+                optimizer_grouped_parameters,
+            )
         else:
             raise ValueError(f"Invalid optimizer: {self.config.ml.optimizer.optimizer}")
 
-        self.scheduler  = CosineLRScheduler(
-            self.optimizer,
-            t_initial=self.config.ml.optimizer.t_initial,
-            lr_min=self.config.ml.optimizer.lr_min,
-            cycle_decay=self.config.ml.optimizer.decay_rate,
-            cycle_limit=math.ceil(self.config.ml.num_epochs / self.config.ml.optimizer.t_initial),
-            warmup_t=self.config.ml.optimizer.warm_up_t,
-            warmup_lr_init=self.config.ml.optimizer.warm_up_init,
-            warmup_prefix=self.config.ml.optimizer.warmup_prefix,
-        )
-        return [self.optimizer], [self.scheduler]
+        if self.config.ml.optimizer.optimizer in ["adamw", "adan"]:
+            self.scheduler  = CosineLRScheduler(
+                self.optimizer,
+                t_initial=self.config.ml.optimizer.t_initial,
+                lr_min=self.config.ml.optimizer.lr_min,
+                cycle_decay=self.config.ml.optimizer.decay_rate,
+                cycle_limit=math.ceil(self.config.ml.num_epochs / self.config.ml.optimizer.t_initial),
+                warmup_t=self.config.ml.optimizer.warm_up_t,
+                warmup_lr_init=self.config.ml.optimizer.warm_up_init,
+                warmup_prefix=self.config.ml.optimizer.warmup_prefix,
+            )
+            return [self.optimizer], [self.scheduler]
+        self.scheduler = None
+        return [self.optimizer], []
     
     
     def lr_scheduler_step(self, scheduler, metric: Any | None) -> None:
-        return scheduler.step(self.current_epoch)
+        if scheduler is not None:
+            return scheduler.step(self.current_epoch)
