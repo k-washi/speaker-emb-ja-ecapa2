@@ -55,3 +55,6 @@ class MLConfig:
     early_stopping: EearlyStoppingConfig = field(default_factory=lambda: EearlyStoppingConfig())
     optimizer: Optimizer = field(default_factory=lambda: Optimizer())
     wandb: WandbConfig = field(default_factory=lambda: WandbConfig())
+    
+    # other settings
+    len_dataloader:int = -1

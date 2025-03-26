@@ -31,13 +31,27 @@ class AAMSoftmaxConfig:
     focal_loss: bool = False
     focal_loss_gamma: int = 2
     label_smoothing: float = 0
+
+@dataclass
+class DinolossConfig:
+    warmup_teacher_temp:float = 0.04
+    teacher_temp:float = 0.04
+    warmup_teacher_temp_epochs:int = 30
+    student_temp:float = 0.1
+    center_momentum:float = 0.9
+    output_dim:int = 2048
+    hidden_dim:int = 512
+    
+
 @dataclass
 class ExpConfig:
     val_spkemb_output_dir: str = "/data/val_spkemb"
+    momentum_teacher: float = 0.9995
 
 @dataclass
 class ModelConfig:
     ecapa2: Ecapa2Config = field(default_factory=lambda: Ecapa2Config())
     ecapa_tdnn: EcapaTDNNConfig = field(default_factory=lambda: EcapaTDNNConfig())
     mmas: AAMSoftmaxConfig = field(default_factory=lambda: AAMSoftmaxConfig())
+    dino: DinolossConfig = field(default_factory=lambda: DinolossConfig())
     exp: ExpConfig = field(default_factory=lambda: ExpConfig())

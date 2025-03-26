@@ -1,7 +1,6 @@
 import pandas as pd
 from pathlib import Path
-
-from pathlib import Path
+import numpy as np
 
 def get_audiofp_and_label_list_from_userlist_file(userlist_fp: str):
     """
@@ -37,3 +36,17 @@ def get_audiofp_and_label_list_from_userlist_file(userlist_fp: str):
     print(f"Total audio: {len(audio_fp_list)}")
     assert label_num == max(label_list) + 1, f"Label num mismatch: {label_num} != {max(label_list) + 1}"
     return audio_fp_list, label_list
+
+
+def cosine_scheduler(base_value, final_value, epochs, niter_per_ep, warmup_epochs=0, start_warmup_value=0):
+    warmup_schedule = np.array([])
+    warmup_iters = warmup_epochs * niter_per_ep
+    if warmup_epochs > 0:
+        warmup_schedule = np.linspace(start_warmup_value, base_value, warmup_iters)
+
+    iters = np.arange(epochs * niter_per_ep - warmup_iters)
+    schedule = final_value + 0.5 * (base_value - final_value) * (1 + np.cos(np.pi * iters / len(iters)))
+
+    schedule = np.concatenate((warmup_schedule, schedule))
+    assert len(schedule) == epochs * niter_per_ep
+    return schedule
